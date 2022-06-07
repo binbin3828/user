@@ -1,0 +1,9 @@
+mysql:
+  driveName: mysql
+  dataSourceName: xgame:xingdong888@tcp(121.196.204.236:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+  maxIdle: 25
+  maxOpen: 50
+  maxLifetime: 1
+  
+
+
