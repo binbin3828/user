@@ -8,14 +8,14 @@ BINARY_UNIX=$(BINARY_NAME)_unix
 
 all: build
 build:
-        $(GOBUILD) -o $(BINARY_NAME) -v
+	$(GOBUILD) -o $(BINARY_NAME) -v
 test:
-        $(GOTEST) -v ./...
+	$(GOTEST) -v ./...
 clean:
-        $(GOCLEAN)
-        rm -f $(BINARY_NAME)
+	$(GOCLEAN)
+	rm -f $(BINARY_NAME)
 
 # Cross compilation
 build-linux:
-        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v
 
