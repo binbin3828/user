@@ -2,8 +2,8 @@
  * @Autor: Bobby
  * @Description: User API service
  * @Date: 2022-06-06 11:02:06
- * @LastEditTime: 2022-06-07 22:03:00
- * @FilePath: \User\service\UserService.go
+ * @LastEditTime: 2022-06-08 14:59:09
+ * @FilePath: \user\service\UserService.go
  */
 package service
 
@@ -23,7 +23,7 @@ import (
 func GetUser(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
-		util.ReturnError(w, constant.ERROR_PARAM_ERR, "参数错误")
+		util.ReturnError(w, constant.ERROR_PARAM_ERR, "vars param uid not set")
 		return
 	}
 	uid, err := strconv.Atoi(vars["uid"])
