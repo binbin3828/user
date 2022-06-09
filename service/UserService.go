@@ -2,7 +2,7 @@
  * @Autor: Bobby
  * @Description: User API service
  * @Date: 2022-06-06 11:02:06
- * @LastEditTime: 2022-06-08 14:59:09
+ * @LastEditTime: 2022-06-08 15:04:35
  * @FilePath: \user\service\UserService.go
  */
 package service
@@ -66,7 +66,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	}
 	uid := user.Id
 
-	//查询出来新建的用户并且返回
+	//find new user and return succ
 	info, err := userDao.FindUser(uid)
 	if err != nil {
 		util.ReturnError(w, -1, err.Error())
@@ -88,7 +88,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) {
 		util.ReturnError(w, constant.ERROR_MYSQL_ERR, err.Error())
 		return
 	}
-	util.ReturnSucc(w, "删除成功")
+	util.ReturnSucc(w, "delete succ")
 }
 
 func ModifyUser(w http.ResponseWriter, r *http.Request) {
@@ -123,7 +123,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 		util.ReturnError(w, constant.ERROR_MYSQL_ERR, err.Error())
 		return
 	}
-	//查询出来新建的用户并且返回
+	//find new player and return
 	info, err := userDao.FindUser(uid)
 	if err != nil {
 		util.ReturnError(w, -1, err.Error())
