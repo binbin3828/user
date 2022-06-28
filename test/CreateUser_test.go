@@ -2,7 +2,7 @@
  * @Autor: Bobby
  * @Description: unit test CreateUser
  * @Date: 2022-06-08 14:33:13
- * @LastEditTime: 2022-06-08 14:57:01
+ * @LastEditTime: 2022-06-09 17:38:59
  * @FilePath: \user\test\CreateUser_test.go
  */
 
@@ -27,6 +27,8 @@ func TestCreateUser_Run(t *testing.T) {
 		Dob:         "1990-01-10",
 		Address:     "shenzhen",
 		Description: "coder",
+		Latitude:    39.910934,
+		Longitude:   116.413385,
 	}
 	sbyte, _ := json.Marshal(user)
 	reader := strings.NewReader(string(sbyte))

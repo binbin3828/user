@@ -2,53 +2,56 @@
  * @Autor: Bobby
  * @Description: User API service
  * @Date: 2022-06-06 11:02:06
- * @LastEditTime: 2022-06-08 15:04:35
+ * @LastEditTime: 2022-06-16 14:41:16
  * @FilePath: \user\service\UserService.go
  */
 package service
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
-	"user/constant"
 	"user/dao"
 	"user/model"
-	"user/pkg/util"
+	"user/pkg/logger"
+
+	"github.com/mmcloughlin/geohash"
 
 	"github.com/gorilla/mux"
 )
 
-func GetUser(w http.ResponseWriter, r *http.Request) {
+func GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
-		util.ReturnError(w, constant.ERROR_PARAM_ERR, "vars param uid not set")
-		return
+		return nil, errors.New("vars param uid not set")
 	}
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
-		util.ReturnError(w, constant.ERROR_PARAM_ERR, err.Error())
-		return
+		return nil, err
 	}
 	userDao := dao.UserDao{}
 	userInfo, err := userDao.FindUser(uid)
 	if err != nil {
-		util.ReturnError(w, -1, err.Error())
-		return
+		return nil, err
 	}
-	util.ReturnSucc(w, userInfo)
+	return userInfo, nil
 }
 
-func CreateUser(w http.ResponseWriter, r *http.Request) {
+func CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
+	logger.SugarLogger.Infof("request body: %s", reqBody)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
 
 	var user model.User
-	if tmp, ok := data["name"].(string); ok {
-		user.Name = tmp
+	tmp, ok := data["name"].(string)
+	if !ok {
+		return nil, errors.New("param name not set")
 	}
+	user.Name = tmp
+
 	if tmp, ok := data["dob"].(string); ok {
 		user.Dob = tmp
 	}
@@ -58,47 +61,59 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	if tmp, ok := data["description"].(string); ok {
 		user.Description = tmp
 	}
+
+	//calc geohash string
+	tmpLatitude, ok1 := data["latitude"].(float64)
+	if ok1 {
+		user.Latitude = tmpLatitude
+	}
+	tmpLongitude, ok2 := data["longitude"].(float64)
+	if ok2 {
+		user.Longitude = tmpLongitude
+	}
+	if ok1 && ok2 && tmpLatitude >= 0 && tmpLongitude >= 0 {
+		//当geohash base32编码长度为8时，精度在19米左右，而当编码长度为9时，精度在2米左右，编码长度需要根据数据情况进行选择
+		hash_base32 := geohash.EncodeWithPrecision(tmpLatitude, tmpLongitude, 8)
+		user.LocGeohash = hash_base32
+	}
+
 	userDao := dao.UserDao{}
 	err := userDao.CreateUser(&user)
 	if err != nil {
-		util.ReturnError(w, -1, err.Error())
-		return
+		return nil, err
 	}
 	uid := user.Id
 
 	//find new user and return succ
 	info, err := userDao.FindUser(uid)
 	if err != nil {
-		util.ReturnError(w, -1, err.Error())
-		return
+		return nil, err
 	}
-	util.ReturnSucc(w, info)
+	return info, nil
 }
 
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
+func DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
-		util.ReturnError(w, constant.ERROR_PARAM_ERR, err.Error())
-		return
+		return nil, err
 	}
 	userDao := dao.UserDao{}
 	err = userDao.DeleteUser(uid)
 	if err != nil {
-		util.ReturnError(w, constant.ERROR_MYSQL_ERR, err.Error())
-		return
+		return nil, err
 	}
-	util.ReturnSucc(w, "delete succ")
+	data := "delete succ"
+	return data, nil
 }
 
-func ModifyUser(w http.ResponseWriter, r *http.Request) {
+func ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
 
 	if _, ok := data["id"].(float64); !ok {
-		util.ReturnError(w, constant.ERROR_PARAM_ERR, "user id is must param")
-		return
+		return nil, errors.New("user id is must param")
 	}
 
 	uid := int(data["id"].(float64))
@@ -117,17 +132,30 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) {
 		modifyArr["description"] = tmp
 	}
 
+	//calc geohash string
+	tmpLatitude, ok1 := data["latitude"].(float64)
+	if ok1 {
+		modifyArr["latitude"] = tmpLatitude
+	}
+	tmpLongitude, ok2 := data["longitude"].(float64)
+	if ok2 {
+		modifyArr["longitude"] = tmpLongitude
+	}
+	if ok1 && ok2 && tmpLatitude >= 0 && tmpLongitude >= 0 {
+		//当geohash base32编码长度为8时，精度在19米左右，而当编码长度为9时，精度在2米左右，编码长度需要根据数据情况进行选择
+		hash_base32 := geohash.EncodeWithPrecision(tmpLatitude, tmpLongitude, 8)
+		modifyArr["loc_geohash"] = hash_base32
+	}
+
 	userDao := dao.UserDao{}
 	err := userDao.UpdateUser(uid, modifyArr)
 	if err != nil {
-		util.ReturnError(w, constant.ERROR_MYSQL_ERR, err.Error())
-		return
+		return nil, err
 	}
 	//find new player and return
 	info, err := userDao.FindUser(uid)
 	if err != nil {
-		util.ReturnError(w, -1, err.Error())
-		return
+		return nil, err
 	}
-	util.ReturnSucc(w, info)
+	return info, nil
 }

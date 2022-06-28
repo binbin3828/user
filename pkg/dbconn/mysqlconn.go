@@ -2,8 +2,8 @@
  * @Autor: Bobby
  * @Description: function for create and connect mysql pool
  * @Date: 2022-06-06 17:00:19
- * @LastEditTime: 2022-06-07 21:54:50
- * @FilePath: \User\pkg\dbconn\mysqlconn.go
+ * @LastEditTime: 2022-06-09 21:24:11
+ * @FilePath: \user\pkg\dbconn\mysqlconn.go
  */
 package dbconn
 
@@ -53,6 +53,10 @@ func InitMysql() {
 	db.DB().SetMaxIdleConns(mysqlConf.MaxIdle)
 	db.DB().SetMaxOpenConns(mysqlConf.MaxOpen)
 	db.DB().SetConnMaxLifetime(time.Duration(mysqlConf.MaxLifetime) * time.Hour)
+
+	gormLogger := &logger.GormLogger{}
+	db.LogMode(true)
+	db.SetLogger(gormLogger)
 
 	logger.SugarLogger.Debug("mysql init succ...")
 }
