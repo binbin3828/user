@@ -10,9 +10,27 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"user/pkg/logger"
 )
+
+type CodeError struct {
+	Code int
+	Msg  string
+}
+
+func (e *CodeError) Error() string {
+	return e.Msg
+}
+
+func NewCodeError(code int, msg string) error {
+	return &CodeError{Code: code, Msg: msg}
+}
+
+func NewCodeErrorf(code int, format string, a ...interface{}) error {
+	return &CodeError{Code: code, Msg: fmt.Sprintf(format, a...)}
+}
 
 type ErrMsg struct {
 	Code int    `json:"code"`

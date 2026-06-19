@@ -9,13 +9,14 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"user/constant"
 	"user/dao"
 	"user/model"
 	"user/pkg/logger"
+	"user/pkg/util"
 
 	"github.com/mmcloughlin/geohash"
 
@@ -25,7 +26,7 @@ import (
 func GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
-		return nil, errors.New("vars param uid not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
 	}
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
@@ -48,7 +49,7 @@ func CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	var user model.User
 	tmp, ok := data["name"].(string)
 	if !ok {
-		return nil, errors.New("param name not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param name not set")
 	}
 	user.Name = tmp
 
@@ -113,7 +114,7 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	json.Unmarshal(reqBody, &data)
 
 	if _, ok := data["id"].(float64); !ok {
-		return nil, errors.New("user id is must param")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "user id is must param")
 	}
 
 	uid := int(data["id"].(float64))

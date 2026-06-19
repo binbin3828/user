@@ -9,11 +9,12 @@ package service
 
 import (
 	"encoding/json"
-	"errors"
 	"io/ioutil"
 	"net/http"
 	"strconv"
+	"user/constant"
 	"user/dao"
+	"user/pkg/util"
 
 	"github.com/gorilla/mux"
 )
@@ -21,7 +22,7 @@ import (
 func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
-		return nil, errors.New("vars param uid not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
 	}
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
@@ -54,7 +55,7 @@ func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error
 func GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
-		return nil, errors.New("vars param uid not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
 	}
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
@@ -85,7 +86,7 @@ func AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	uidft, ok := data["uid"].(float64)
 	if !ok {
-		return nil, errors.New("param uid not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
 	}
 	uid := int(uidft)
 
@@ -98,7 +99,7 @@ func AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 
 	friFt, ok := data["fri"].(float64)
 	if !ok {
-		return nil, errors.New("param fri not set")
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param fri not set")
 	}
 	fri := int(friFt)
 
