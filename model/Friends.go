@@ -12,7 +12,7 @@ import "user/pkg/util"
 
 type Friends struct {
 	Uid        int           `json:"uid"`       //my uid
-	Fri        int           `json:"name"`      //friend uid
+	Fri        int           `json:"fri"`       //friend uid
 	CreateTime util.JsonTime `json:"create_at"` //relation create time
 }
 
