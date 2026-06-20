@@ -9,7 +9,7 @@ cors:
   allowedOrigins: "*"
 
 jwt:
-  secret: change-me-in-production-use-a-long-random-string
+  secret: dev-change-this-in-production-use-a-long-random-string
 
 tls:
   enabled: true

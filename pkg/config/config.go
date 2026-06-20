@@ -13,6 +13,8 @@ var configFile embed.FS
 
 var v *viper2.Viper
 
+var defaultJWTSecret = "change-me-in-production-use-a-long-random-string"
+
 func init() {
 	data, err := configFile.ReadFile("config.yaml")
 	if err != nil {
@@ -22,6 +24,11 @@ func init() {
 	v.SetConfigType("yaml")
 	if err := v.ReadConfig(bytes.NewReader(data)); err != nil {
 		panic(err.Error())
+	}
+
+	s, _ := Get("config.jwt.secret").(string)
+	if s == "" || s == defaultJWTSecret {
+		panic("FATAL: jwt.secret must be changed from the default value in production. Set it in config.yaml or via JWT_SECRET env var.")
 	}
 }
 

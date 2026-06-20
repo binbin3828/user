@@ -66,11 +66,6 @@ func main() {
 	friendsDao := dao.NewFriendsDao(db, zapLog)
 
 	svc := service.NewService(zapLog, userDao, friendsDao)
-
-	if secret, _ := config.Get("config.jwt.secret").(string); secret == "" || secret == "change-me-in-production-use-a-long-random-string" {
-		log.Fatalf("FATAL: jwt.secret must be changed from the default value in production. Set it in config.yaml or via JWT_SECRET env var.")
-	}
-
 	router := service.NewRouter(svc)
 
 	tlsEnabled, _ := config.Get("config.tls.enabled").(bool)

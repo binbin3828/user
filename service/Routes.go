@@ -3,6 +3,7 @@ package service
 import (
 	"time"
 
+	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
@@ -13,9 +14,11 @@ import (
 func NewRouter(s *Service) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(gzip.Gzip(gzip.DefaultCompression))
 	r.Use(RequestID())
 	r.Use(CORS())
 	r.Use(SecurityHeaders())
+	r.Use(RequireContentType())
 	r.Use(TracingMiddleware("user-service"))
 	r.Use(MetricsMiddleware())
 	r.Use(s.LoggerMiddleware())

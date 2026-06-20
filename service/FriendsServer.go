@@ -95,13 +95,7 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 		return
 	}
 
-	s.returnSuccess(c, gin.H{
-		"uid":       uid,
-		"list":      list,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
+	s.returnPaginated(c, list, total, page, pageSize)
 }
 
 // @Summary      Get friends list
@@ -155,13 +149,7 @@ func (s *Service) GetFriendsList(c *gin.Context) {
 		return
 	}
 
-	s.returnSuccess(c, gin.H{
-		"uid":       uid,
-		"list":      list,
-		"total":     total,
-		"page":      page,
-		"page_size": pageSize,
-	})
+	s.returnPaginated(c, list, total, page, pageSize)
 }
 
 // @Summary      Add a friend

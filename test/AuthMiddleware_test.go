@@ -6,19 +6,30 @@ import (
 	"testing"
 	"time"
 
+	"user/pkg/config"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type testClaims struct {
+	UserID int    `json:"user_id"`
+	Role   string `json:"role"`
+	jwt.RegisteredClaims
+}
+
 func testToken(userID int) string {
-	claims := jwt.MapClaims{
-		"user_id": float64(userID),
-		"role":    "user",
-		"exp":     time.Now().Add(24 * time.Hour).Unix(),
-		"iat":     time.Now().Unix(),
+	claims := testClaims{
+		UserID: userID,
+		Role:   "user",
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+		},
 	}
+	secret, _ := config.Get("config.jwt.secret").(string)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	s, _ := token.SignedString([]byte("change-me-in-production-use-a-long-random-string"))
+	s, _ := token.SignedString([]byte(secret))
 	return s
 }
 

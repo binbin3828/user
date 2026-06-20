@@ -31,26 +31,23 @@ func TestGetFriendsList_Success(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	data := resp["data"].(map[string]interface{})
-	if int(data["uid"].(float64)) != 1 {
-		t.Errorf("expected uid=1, got %v", data["uid"])
+	data := resp["data"].([]interface{})
+	if len(data) != 1 {
+		t.Fatalf("expected 1 friend, got %d", len(data))
 	}
-	list := data["list"].([]interface{})
-	if len(list) != 1 {
-		t.Fatalf("expected 1 friend, got %d", len(list))
-	}
-	first := list[0].(map[string]interface{})
+	first := data[0].(map[string]interface{})
 	if int(first["fri_uid"].(float64)) != 2 {
 		t.Errorf("expected fri_uid=2, got %v", first["fri_uid"])
 	}
-	if int(data["total"].(float64)) != 1 {
-		t.Errorf("expected total=1, got %v", data["total"])
+	p := resp["pagination"].(map[string]interface{})
+	if int(p["total"].(float64)) != 1 {
+		t.Errorf("expected total=1, got %v", p["total"])
 	}
-	if int(data["page"].(float64)) != 1 {
-		t.Errorf("expected page=1, got %v", data["page"])
+	if int(p["page"].(float64)) != 1 {
+		t.Errorf("expected page=1, got %v", p["page"])
 	}
-	if int(data["page_size"].(float64)) != 20 {
-		t.Errorf("expected page_size=20, got %v", data["page_size"])
+	if int(p["page_size"].(float64)) != 20 {
+		t.Errorf("expected page_size=20, got %v", p["page_size"])
 	}
 }
 
@@ -108,12 +105,12 @@ func TestGetFriendsList_EmptyList(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	data := resp["data"].(map[string]interface{})
-	list, _ := data["list"].([]interface{})
-	if len(list) != 0 {
-		t.Errorf("expected empty list, got %d items", len(list))
+	data, _ := resp["data"].([]interface{})
+	if len(data) != 0 {
+		t.Errorf("expected empty list, got %d items", len(data))
 	}
-	if int(data["total"].(float64)) != 0 {
-		t.Errorf("expected total=0, got %v", data["total"])
+	p := resp["pagination"].(map[string]interface{})
+	if int(p["total"].(float64)) != 0 {
+		t.Errorf("expected total=0, got %v", p["total"])
 	}
 }

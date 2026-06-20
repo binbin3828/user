@@ -196,6 +196,21 @@ func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 	}
 }
 
+func RequireContentType() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Method == "POST" || c.Request.Method == "PUT" {
+			if c.GetHeader("Content-Type") != "application/json" {
+				c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{
+					"code": constant.ERROR_PARAM_ERR,
+					"msg":  "Content-Type must be application/json",
+				})
+				return
+			}
+		}
+		c.Next()
+	}
+}
+
 func (s *Service) RequireRole(roles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		role, exists := c.Get("role")

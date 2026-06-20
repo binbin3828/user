@@ -74,6 +74,23 @@ func (s *Service) returnSuccess(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
 }
 
+func (s *Service) returnPaginated(c *gin.Context, data interface{}, total int64, page, pageSize int) {
+	totalPages := int(total) / pageSize
+	if int(total)%pageSize != 0 {
+		totalPages++
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"code": 0,
+		"data": data,
+		"pagination": gin.H{
+			"total":       total,
+			"page":        page,
+			"page_size":   pageSize,
+			"total_pages": totalPages,
+		},
+	})
+}
+
 // @Summary      Liveness check
 // @Description  Returns OK if the service is alive
 // @Tags         System
