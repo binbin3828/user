@@ -74,10 +74,23 @@ func (s *Service) returnSuccess(c *gin.Context, data interface{}) {
 	c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
 }
 
+// @Summary      Liveness check
+// @Description  Returns OK if the service is alive
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  util.SuccMsg
+// @Router       /healthz [get]
 func (s *Service) Healthz(c *gin.Context) {
 	s.returnSuccess(c, "ok")
 }
 
+// @Summary      Readiness check
+// @Description  Returns OK if the service can reach the database
+// @Tags         System
+// @Produce      json
+// @Success      200  {object}  util.SuccMsg
+// @Failure      503  {object}  util.ErrMsg
+// @Router       /readyz [get]
 func (s *Service) Readyz(c *gin.Context) {
 	_, err := s.UserDao.FindUser(c.Request.Context(), 0)
 	if err == nil {

@@ -1,3 +1,21 @@
+// @title           User Service API
+// @version         1.0
+// @description     User management and geo-based friend discovery REST API
+// @termsOfService  https://github.com/binbin3828/user
+
+// @contact.name   Developer
+// @contact.url    https://github.com/binbin3828/user
+
+// @license.name  MIT
+// @license.url   https://opensource.org/licenses/MIT
+
+// @host      localhost:8080
+// @BasePath  /v1
+
+// @securityDefinitions.apikey Bearer
+// @in header
+// @name Authorization
+// @description Type "Bearer " followed by your JWT token
 package main
 
 import (
@@ -48,6 +66,11 @@ func main() {
 	friendsDao := dao.NewFriendsDao(db, zapLog)
 
 	svc := service.NewService(zapLog, userDao, friendsDao)
+
+	if secret, _ := config.Get("config.jwt.secret").(string); secret == "" || secret == "change-me-in-production-use-a-long-random-string" {
+		log.Fatalf("FATAL: jwt.secret must be changed from the default value in production. Set it in config.yaml or via JWT_SECRET env var.")
+	}
+
 	router := service.NewRouter(svc)
 
 	tlsEnabled, _ := config.Get("config.tls.enabled").(bool)

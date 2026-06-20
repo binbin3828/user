@@ -28,6 +28,19 @@ func parsePagination(c *gin.Context) (page, pageSize int) {
 	return
 }
 
+// @Summary      Find nearby friends
+// @Description  Find friends whose geohash location matches a given precision prefix
+// @Tags         Friends
+// @Produce      json
+// @Param        uid path int true "User ID"
+// @Param        precision query int false "Geohash precision (1-12, default 6)"
+// @Param        page query int false "Page number (default 1)"
+// @Param        page_size query int false "Items per page (default 20, max 100)"
+// @Success      200  {object}  util.SuccMsg
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /nearbyfriends/{uid} [get]
+// @Security     Bearer
 func (s *Service) GetNearbyFriend(c *gin.Context) {
 	uidStr := c.Param("uid")
 	if uidStr == "" {
@@ -91,6 +104,18 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 	})
 }
 
+// @Summary      Get friends list
+// @Description  Returns paginated list of friends for the given user
+// @Tags         Friends
+// @Produce      json
+// @Param        uid path int true "User ID"
+// @Param        page query int false "Page number (default 1)"
+// @Param        page_size query int false "Items per page (default 20, max 100)"
+// @Success      200  {object}  util.SuccMsg
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /friends/{uid} [get]
+// @Security     Bearer
 func (s *Service) GetFriendsList(c *gin.Context) {
 	uidStr := c.Param("uid")
 	if uidStr == "" {
@@ -139,6 +164,17 @@ func (s *Service) GetFriendsList(c *gin.Context) {
 	})
 }
 
+// @Summary      Add a friend
+// @Description  Establish a bidirectional friendship between two users
+// @Tags         Friends
+// @Accept       json
+// @Produce      json
+// @Param        friendship body addFriendReq true "Friend request"
+// @Success      200  {object}  util.SuccMsg
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /friends [post]
+// @Security     Bearer
 func (s *Service) AddFriend(c *gin.Context) {
 	reqBody, _ := c.GetRawData()
 

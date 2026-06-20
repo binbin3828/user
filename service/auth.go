@@ -57,6 +57,16 @@ type loginReq struct {
 	Password string `json:"password" validate:"required"`
 }
 
+// @Summary      User login
+// @Description  Authenticate with name and password, returns JWT token
+// @Tags         Auth
+// @Accept       json
+// @Produce      json
+// @Param        credentials body loginReq true "Login credentials"
+// @Success      200  {object}  util.SuccMsg
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      401  {object}  util.ErrMsg
+// @Router       /auth/login [post]
 func (s *Service) Login(c *gin.Context) {
 	reqBody, _ := c.GetRawData()
 

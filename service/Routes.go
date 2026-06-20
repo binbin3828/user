@@ -4,6 +4,10 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
+
+	_ "user/docs"
 )
 
 func NewRouter(s *Service) *gin.Engine {
@@ -24,27 +28,26 @@ func NewRouter(s *Service) *gin.Engine {
 	r.GET("/healthz", s.Healthz)
 	r.GET("/readyz", s.Readyz)
 	r.GET("/metrics", MetricsHandler())
-	r.POST("/auth/login", RateLimitMiddleware(loginLimiter), s.Login)
 
-	auth := r.Group("")
-	auth.Use(s.AuthRequired())
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	v1 := r.Group("/v1")
 	{
-		auth.GET("/user/:uid", s.GetUser)
-		auth.POST("/user", s.CreateUser)
-		auth.PUT("/user", s.ModifyUser)
-		auth.DELETE("/user/:uid", s.DeleteUser)
+		v1.POST("/auth/login", RateLimitMiddleware(loginLimiter), s.Login)
 
-		auth.POST("/friends", s.AddFriend)
-		auth.GET("/friends/:uid", s.GetFriendsList)
-		auth.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
+		auth := v1.Group("")
+		auth.Use(s.AuthRequired())
+		{
+			auth.GET("/user/:uid", s.GetUser)
+			auth.POST("/user", s.CreateUser)
+			auth.PUT("/user", s.ModifyUser)
+			auth.DELETE("/user/:uid", s.DeleteUser)
+
+			auth.POST("/friends", s.AddFriend)
+			auth.GET("/friends/:uid", s.GetFriendsList)
+			auth.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
+		}
 	}
-
-	// Example: admin-only routes (uncomment when admin handler exists)
-	// admin := r.Group("/admin")
-	// admin.Use(s.AuthRequired(), s.RequireRole("admin"))
-	// {
-	// 	admin.GET("/users", s.ListAllUsers)
-	// }
 
 	return r
 }

@@ -26,6 +26,16 @@ func sanitizeErr(err error) error {
 	return util.NewCodeError(constant.ERROR_MYSQL_ERR, "internal error")
 }
 
+// @Summary      Get user by ID
+// @Description  Returns user information for the given user ID
+// @Tags         Users
+// @Produce      json
+// @Param        uid path int true "User ID"
+// @Success      200  {object}  util.SuccMsg{data=model.User}
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /user/{uid} [get]
+// @Security     Bearer
 func (s *Service) GetUser(c *gin.Context) {
 	uidStr := c.Param("uid")
 	if uidStr == "" {
@@ -45,6 +55,16 @@ func (s *Service) GetUser(c *gin.Context) {
 	s.returnSuccess(c, userInfo)
 }
 
+// @Summary      Create a new user
+// @Description  Register a new user with name, password and optional profile info
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        user body createUserReq true "User creation request"
+// @Success      200  {object}  util.SuccMsg{data=model.User}
+// @Failure      400  {object}  util.ErrMsg
+// @Router       /user [post]
+// @Security     Bearer
 func (s *Service) CreateUser(c *gin.Context) {
 	reqBody, _ := c.GetRawData()
 
@@ -94,6 +114,16 @@ func (s *Service) CreateUser(c *gin.Context) {
 	s.returnSuccess(c, info)
 }
 
+// @Summary      Delete user
+// @Description  Delete the authenticated user's account
+// @Tags         Users
+// @Produce      json
+// @Param        uid path int true "User ID"
+// @Success      200  {object}  util.SuccMsg
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /user/{uid} [delete]
+// @Security     Bearer
 func (s *Service) DeleteUser(c *gin.Context) {
 	uidStr := c.Param("uid")
 	if uidStr == "" {
@@ -120,6 +150,17 @@ func (s *Service) DeleteUser(c *gin.Context) {
 	s.returnSuccess(c, "delete succ")
 }
 
+// @Summary      Update user profile
+// @Description  Modify the authenticated user's profile fields
+// @Tags         Users
+// @Accept       json
+// @Produce      json
+// @Param        user body modifyUserReq true "User modification request"
+// @Success      200  {object}  util.SuccMsg{data=model.User}
+// @Failure      400  {object}  util.ErrMsg
+// @Failure      403  {object}  util.ErrMsg
+// @Router       /user [put]
+// @Security     Bearer
 func (s *Service) ModifyUser(c *gin.Context) {
 	reqBody, _ := c.GetRawData()
 

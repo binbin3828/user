@@ -1,0 +1,405 @@
+basePath: /v1
+definitions:
+  model.User:
+    properties:
+      address:
+        type: string
+      create_at:
+        type: string
+      description:
+        type: string
+      dob:
+        type: string
+      id:
+        type: integer
+      latitude:
+        type: number
+      loc_geohash:
+        type: string
+      longitude:
+        type: number
+      name:
+        type: string
+    type: object
+  service.addFriendReq:
+    properties:
+      fri:
+        type: number
+      uid:
+        type: number
+    required:
+    - fri
+    - uid
+    type: object
+  service.createUserReq:
+    properties:
+      address:
+        type: string
+      description:
+        type: string
+      dob:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      name:
+        type: string
+      password:
+        minLength: 8
+        type: string
+    required:
+    - name
+    - password
+    type: object
+  service.loginReq:
+    properties:
+      name:
+        type: string
+      password:
+        type: string
+    required:
+    - name
+    - password
+    type: object
+  service.modifyUserReq:
+    properties:
+      id:
+        type: number
+    required:
+    - id
+    type: object
+  util.ErrMsg:
+    properties:
+      code:
+        type: integer
+      msg:
+        type: string
+    type: object
+  util.SuccMsg:
+    properties:
+      code:
+        type: integer
+      data: {}
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Developer
+    url: https://github.com/binbin3828/user
+  description: User management and geo-based friend discovery REST API
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/binbin3828/user
+  title: User Service API
+  version: "1.0"
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate with name and password, returns JWT token
+      parameters:
+      - description: Login credentials
+        in: body
+        name: credentials
+        required: true
+        schema:
+          $ref: '#/definitions/service.loginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      summary: User login
+      tags:
+      - Auth
+  /friends:
+    post:
+      consumes:
+      - application/json
+      description: Establish a bidirectional friendship between two users
+      parameters:
+      - description: Friend request
+        in: body
+        name: friendship
+        required: true
+        schema:
+          $ref: '#/definitions/service.addFriendReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Add a friend
+      tags:
+      - Friends
+  /friends/{uid}:
+    get:
+      description: Returns paginated list of friends for the given user
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Get friends list
+      tags:
+      - Friends
+  /healthz:
+    get:
+      description: Returns OK if the service is alive
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+      summary: Liveness check
+      tags:
+      - System
+  /nearbyfriends/{uid}:
+    get:
+      description: Find friends whose geohash location matches a given precision prefix
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      - description: Geohash precision (1-12, default 6)
+        in: query
+        name: precision
+        type: integer
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 20, max 100)
+        in: query
+        name: page_size
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Find nearby friends
+      tags:
+      - Friends
+  /readyz:
+    get:
+      description: Returns OK if the service can reach the database
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      summary: Readiness check
+      tags:
+      - System
+  /user:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user with name, password and optional profile info
+      parameters:
+      - description: User creation request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/service.createUserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.SuccMsg'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Create a new user
+      tags:
+      - Users
+    put:
+      consumes:
+      - application/json
+      description: Modify the authenticated user's profile fields
+      parameters:
+      - description: User modification request
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/service.modifyUserReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.SuccMsg'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Update user profile
+      tags:
+      - Users
+  /user/{uid}:
+    delete:
+      description: Delete the authenticated user's account
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/util.SuccMsg'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Delete user
+      tags:
+      - Users
+    get:
+      description: Returns user information for the given user ID
+      parameters:
+      - description: User ID
+        in: path
+        name: uid
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/util.SuccMsg'
+            - properties:
+                data:
+                  $ref: '#/definitions/model.User'
+              type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/util.ErrMsg'
+      security:
+      - Bearer: []
+      summary: Get user by ID
+      tags:
+      - Users
+securityDefinitions:
+  Bearer:
+    description: Type "Bearer " followed by your JWT token
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
