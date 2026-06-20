@@ -11,6 +11,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"user/dao"
 	"user/pkg/dbconn"
 	"user/pkg/logger"
 	"user/service"
@@ -22,13 +23,21 @@ func main() {
 	logger.InitLogger()
 	defer logger.SugarLogger.Sync()
 	dbconn.InitMysql()
-	router := NewRouter()
+
+	// 创建 DAO 实例
+	userDao := &dao.UserDao{}
+	friendsDao := &dao.FriendsDao{}
+
+	// 创建 Service 并注入 DAO 依赖
+	svc := service.NewService(userDao, friendsDao)
+
+	router := NewRouter(svc)
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
-func NewRouter() *mux.Router {
+func NewRouter(svc *service.Service) *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
-	for _, route := range service.AllRoutes {
+	for _, route := range service.AllRoutes(svc) {
 		var handler http.Handler
 		handler = route.HandlerFunc
 

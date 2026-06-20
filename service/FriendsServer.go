@@ -5,6 +5,7 @@
  * @LastEditTime: 2022-06-16 14:26:38
  * @FilePath: \user\service\FriendsServer.go
  */
+
 package service
 
 import (
@@ -13,13 +14,12 @@ import (
 	"net/http"
 	"strconv"
 	"user/constant"
-	"user/dao"
 	"user/pkg/util"
 
 	"github.com/gorilla/mux"
 )
 
-func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
@@ -30,8 +30,7 @@ func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error
 	}
 
 	//check uid exist
-	userDao := dao.UserDao{}
-	info, err := userDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -40,8 +39,7 @@ func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error
 	//附近，参数n代表Geohash，精确的位数，也就是大概距离；n=6时候，大概为附近1千米
 	likeSubStr := geohashStr[0:6]
 
-	friendsDao := dao.FriendsDao{}
-	list, err := friendsDao.GetNearbyFriend(uid, likeSubStr)
+	list, err := s.FriendsDao.GetNearbyFriend(uid, likeSubStr)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +50,7 @@ func GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error
 	return data, nil
 }
 
-func GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
@@ -63,13 +61,11 @@ func GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error)
 	}
 
 	//check uid exist
-	userDao := dao.UserDao{}
-	_, err = userDao.FindUser(uid)
+	_, err = s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}
-	friendsDao := dao.FriendsDao{}
-	list, err := friendsDao.GetFriendsList(uid)
+	list, err := s.FriendsDao.GetFriendsList(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +75,7 @@ func GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error)
 	return data, nil
 }
 
-func AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
@@ -91,8 +87,7 @@ func AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	uid := int(uidft)
 
 	//check uid exist
-	userDao := dao.UserDao{}
-	_, err := userDao.FindUser(uid)
+	_, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -104,13 +99,12 @@ func AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	fri := int(friFt)
 
 	//check fri exist
-	_, err = userDao.FindUser(fri)
+	_, err = s.UserDao.FindUser(fri)
 	if err != nil {
 		return nil, err
 	}
 
-	friendsDao := dao.FriendsDao{}
-	err = friendsDao.AddFriend(uid, fri)
+	err = s.FriendsDao.AddFriend(uid, fri)
 	if err != nil {
 		return nil, err
 	}

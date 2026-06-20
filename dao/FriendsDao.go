@@ -15,6 +15,16 @@ import (
 	"user/pkg/util"
 )
 
+// IFriendsDao 好友数据访问接口
+type IFriendsDao interface {
+	AddFriend(uid, fri int) error
+	GetFriendsList(uid int) ([]*model.RetListFriends, error)
+	GetNearbyFriend(uid int, subStr string) ([]*model.RetNearbyFriendsList, error)
+}
+
+// 编译期检查 FriendsDao 是否实现 IFriendsDao
+var _ IFriendsDao = (*FriendsDao)(nil)
+
 type FriendsDao struct {
 }
 

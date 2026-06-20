@@ -5,6 +5,7 @@
  * @LastEditTime: 2022-06-16 14:41:16
  * @FilePath: \user\service\UserService.go
  */
+
 package service
 
 import (
@@ -13,7 +14,6 @@ import (
 	"net/http"
 	"strconv"
 	"user/constant"
-	"user/dao"
 	"user/model"
 	"user/pkg/logger"
 	"user/pkg/util"
@@ -23,7 +23,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	if _, ok := vars["uid"]; !ok {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
@@ -32,15 +32,14 @@ func GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	userDao := dao.UserDao{}
-	userInfo, err := userDao.FindUser(uid)
+	userInfo, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}
 	return userInfo, nil
 }
 
-func CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	logger.SugarLogger.Infof("request body: %s", reqBody)
 	data := make(map[string]interface{})
@@ -78,29 +77,27 @@ func CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		user.LocGeohash = hash_base32
 	}
 
-	userDao := dao.UserDao{}
-	err := userDao.CreateUser(&user)
+	err := s.UserDao.CreateUser(&user)
 	if err != nil {
 		return nil, err
 	}
 	uid := user.Id
 
 	//find new user and return succ
-	info, err := userDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}
 	return info, nil
 }
 
-func DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	vars := mux.Vars(r)
 	uid, err := strconv.Atoi(vars["uid"])
 	if err != nil {
 		return nil, err
 	}
-	userDao := dao.UserDao{}
-	err = userDao.DeleteUser(uid)
+	err = s.UserDao.DeleteUser(uid)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +105,7 @@ func DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	return data, nil
 }
 
-func ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
@@ -148,13 +145,12 @@ func ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 		modifyArr["loc_geohash"] = hash_base32
 	}
 
-	userDao := dao.UserDao{}
-	err := userDao.UpdateUser(uid, modifyArr)
+	err := s.UserDao.UpdateUser(uid, modifyArr)
 	if err != nil {
 		return nil, err
 	}
 	//find new player and return
-	info, err := userDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err
 	}

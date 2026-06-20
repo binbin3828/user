@@ -14,6 +14,17 @@ import (
 	"user/pkg/util"
 )
 
+// IUserDao 用户数据访问接口
+type IUserDao interface {
+	CreateUser(user *model.User) error
+	FindUser(id int) (*model.User, error)
+	DeleteUser(uid int) error
+	UpdateUser(uid int, modifyArr map[string]interface{}) error
+}
+
+// 编译期检查 UserDao 是否实现 IUserDao
+var _ IUserDao = (*UserDao)(nil)
+
 type UserDao struct {
 }
 
