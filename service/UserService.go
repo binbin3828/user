@@ -14,6 +14,7 @@ import (
 )
 
 func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	uidStr := chi.URLParam(r, "uid")
 	if uidStr == "" {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
@@ -22,7 +23,7 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, 
 	if err != nil {
 		return nil, err
 	}
-	userInfo, err := s.UserDao.FindUser(uid)
+	userInfo, err := s.UserDao.FindUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -30,6 +31,7 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, 
 }
 
 func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	reqBody, _ := io.ReadAll(r.Body)
 	s.Logger.Infof("request body: %s", reqBody)
 
@@ -55,12 +57,12 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 		user.LocGeohash = hash_base32
 	}
 
-	err := s.UserDao.CreateUser(&user)
+	err := s.UserDao.CreateUser(ctx, &user)
 	if err != nil {
 		return nil, err
 	}
 
-	info, err := s.UserDao.FindUser(user.Id)
+	info, err := s.UserDao.FindUser(ctx, user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -68,6 +70,7 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 }
 
 func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	uidStr := chi.URLParam(r, "uid")
 	if uidStr == "" {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
@@ -76,7 +79,7 @@ func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{
 	if err != nil {
 		return nil, err
 	}
-	err = s.UserDao.DeleteUser(uid)
+	err = s.UserDao.DeleteUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -84,6 +87,7 @@ func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{
 }
 
 func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	reqBody, _ := io.ReadAll(r.Body)
 
 	var req modifyUserReq
@@ -125,11 +129,11 @@ func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{
 		modifyArr["loc_geohash"] = hash_base32
 	}
 
-	err := s.UserDao.UpdateUser(uid, modifyArr)
+	err := s.UserDao.UpdateUser(ctx, uid, modifyArr)
 	if err != nil {
 		return nil, err
 	}
-	info, err := s.UserDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}

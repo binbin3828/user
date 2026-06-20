@@ -27,16 +27,16 @@ func TestAddFriend_Success(t *testing.T) {
 	if !ok {
 		t.Fatalf("expected map, got %T", data)
 	}
-	if int(result["uid"].(int)) != 1 || int(result["fri"].(int)) != 2 {
-		t.Errorf("got uid=%v fri=%v, want uid=1 fri=2", result["uid"], result["fri"])
+	if int(result["uid"].(int)) != 1 || int(result["friend_id"].(int)) != 2 {
+		t.Errorf("got uid=%v friend_id=%v, want uid=1 friend_id=2", result["uid"], result["friend_id"])
 	}
 	// verify bidirectional friendship
 	found := 0
 	for _, f := range friendsDao.Friends {
-		if f.Uid == 1 && f.Fri == 2 {
+		if f.Uid == 1 && f.FriendID == 2 {
 			found++
 		}
-		if f.Uid == 2 && f.Fri == 1 {
+		if f.Uid == 2 && f.FriendID == 1 {
 			found++
 		}
 	}

@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"net/http/httptest"
 	"testing"
 	"user/model"
@@ -10,7 +11,7 @@ func TestGetNearbyFriend_Success(t *testing.T) {
 	svc, userDao, friendsDao := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0" + "xxxxx"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob", LocGeohash: "wx4g0" + "yyyyy"}
-	friendsDao.AddFriend(1, 2)
+	friendsDao.AddFriend(context.Background(), 1, 2)
 
 	req := httptest.NewRequest("GET", "/nearbyfriends/1", nil)
 	req = chiSetURLParam(req, "uid", "1")

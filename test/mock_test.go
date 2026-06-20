@@ -49,7 +49,7 @@ func NewMockUserDao() *MockUserDao {
 	}
 }
 
-func (m *MockUserDao) CreateUser(user *model.User) error {
+func (m *MockUserDao) CreateUser(ctx context.Context, user *model.User) error {
 	if m.CreateUserErr != nil {
 		return m.CreateUserErr
 	}
@@ -60,7 +60,7 @@ func (m *MockUserDao) CreateUser(user *model.User) error {
 	return nil
 }
 
-func (m *MockUserDao) FindUser(id int) (*model.User, error) {
+func (m *MockUserDao) FindUser(ctx context.Context, id int) (*model.User, error) {
 	if m.FindUserErr != nil {
 		return nil, m.FindUserErr
 	}
@@ -71,7 +71,7 @@ func (m *MockUserDao) FindUser(id int) (*model.User, error) {
 	return user, nil
 }
 
-func (m *MockUserDao) DeleteUser(uid int) error {
+func (m *MockUserDao) DeleteUser(ctx context.Context, uid int) error {
 	if m.DeleteUserErr != nil {
 		return m.DeleteUserErr
 	}
@@ -82,7 +82,7 @@ func (m *MockUserDao) DeleteUser(uid int) error {
 	return nil
 }
 
-func (m *MockUserDao) UpdateUser(uid int, modifyArr map[string]interface{}) error {
+func (m *MockUserDao) UpdateUser(ctx context.Context, uid int, modifyArr map[string]interface{}) error {
 	if m.UpdateUserErr != nil {
 		return m.UpdateUserErr
 	}
@@ -126,17 +126,17 @@ func NewMockFriendsDao() *MockFriendsDao {
 	return &MockFriendsDao{}
 }
 
-func (m *MockFriendsDao) AddFriend(uid, fri int) error {
+func (m *MockFriendsDao) AddFriend(ctx context.Context, uid, friendID int) error {
 	if m.AddFriendErr != nil {
 		return m.AddFriendErr
 	}
 	now := util.JsonTime(time.Now())
-	m.Friends = append(m.Friends, &model.Friends{Uid: uid, Fri: fri, CreateTime: now})
-	m.Friends = append(m.Friends, &model.Friends{Uid: fri, Fri: uid, CreateTime: now})
+	m.Friends = append(m.Friends, &model.Friends{Uid: uid, FriendID: friendID, CreateTime: now})
+	m.Friends = append(m.Friends, &model.Friends{Uid: friendID, FriendID: uid, CreateTime: now})
 	return nil
 }
 
-func (m *MockFriendsDao) GetFriendsList(uid int) ([]*model.RetListFriends, error) {
+func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.RetListFriends, error) {
 	if m.GetFriendsListErr != nil {
 		return nil, m.GetFriendsListErr
 	}
@@ -145,8 +145,8 @@ func (m *MockFriendsDao) GetFriendsList(uid int) ([]*model.RetListFriends, error
 	for _, f := range m.Friends {
 		if f.Uid == uid {
 			list = append(list, &model.RetListFriends{
-				FriUid:     f.Fri,
-				FriName:    fmt.Sprintf("user_%d", f.Fri),
+				FriUid:     f.FriendID,
+				FriName:    fmt.Sprintf("user_%d", f.FriendID),
 				CreateTime: now,
 			})
 		}
@@ -154,7 +154,7 @@ func (m *MockFriendsDao) GetFriendsList(uid int) ([]*model.RetListFriends, error
 	return list, nil
 }
 
-func (m *MockFriendsDao) GetNearbyFriend(uid int, subStr string) ([]*model.RetNearbyFriendsList, error) {
+func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr string) ([]*model.RetNearbyFriendsList, error) {
 	if m.GetNearbyFriendErr != nil {
 		return nil, m.GetNearbyFriendErr
 	}
@@ -163,8 +163,8 @@ func (m *MockFriendsDao) GetNearbyFriend(uid int, subStr string) ([]*model.RetNe
 	for _, f := range m.Friends {
 		if f.Uid == uid {
 			list = append(list, &model.RetNearbyFriendsList{
-				FriUid:     f.Fri,
-				FriName:    fmt.Sprintf("user_%d", f.Fri),
+				FriUid:     f.FriendID,
+				FriName:    fmt.Sprintf("user_%d", f.FriendID),
 				CreateTime: now,
 				Latitude:   39.91,
 				Longitude:  116.41,

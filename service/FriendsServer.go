@@ -12,6 +12,7 @@ import (
 )
 
 func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	uidStr := chi.URLParam(r, "uid")
 	if uidStr == "" {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
@@ -21,7 +22,7 @@ func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (inter
 		return nil, err
 	}
 
-	info, err := s.UserDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -29,7 +30,7 @@ func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (inter
 
 	likeSubStr := geohashStr[0:6]
 
-	list, err := s.FriendsDao.GetNearbyFriend(uid, likeSubStr)
+	list, err := s.FriendsDao.GetNearbyFriend(ctx, uid, likeSubStr)
 	if err != nil {
 		return nil, err
 	}
@@ -41,6 +42,7 @@ func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (inter
 }
 
 func (s *Service) GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	uidStr := chi.URLParam(r, "uid")
 	if uidStr == "" {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
@@ -50,11 +52,11 @@ func (s *Service) GetFriendsList(w http.ResponseWriter, r *http.Request) (interf
 		return nil, err
 	}
 
-	_, err = s.UserDao.FindUser(uid)
+	_, err = s.UserDao.FindUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
-	list, err := s.FriendsDao.GetFriendsList(uid)
+	list, err := s.FriendsDao.GetFriendsList(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
@@ -65,6 +67,7 @@ func (s *Service) GetFriendsList(w http.ResponseWriter, r *http.Request) (interf
 }
 
 func (s *Service) AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
+	ctx := r.Context()
 	reqBody, _ := io.ReadAll(r.Body)
 
 	var req addFriendReq
@@ -76,25 +79,25 @@ func (s *Service) AddFriend(w http.ResponseWriter, r *http.Request) (interface{}
 	}
 
 	uid := int(req.Uid)
-	fri := int(req.Fri)
+	friendID := int(req.Fri)
 
-	_, err := s.UserDao.FindUser(uid)
+	_, err := s.UserDao.FindUser(ctx, uid)
 	if err != nil {
 		return nil, err
 	}
 
-	_, err = s.UserDao.FindUser(fri)
+	_, err = s.UserDao.FindUser(ctx, friendID)
 	if err != nil {
 		return nil, err
 	}
 
-	err = s.FriendsDao.AddFriend(uid, fri)
+	err = s.FriendsDao.AddFriend(ctx, uid, friendID)
 	if err != nil {
 		return nil, err
 	}
 
 	data := make(map[string]interface{})
 	data["uid"] = uid
-	data["fri"] = fri
+	data["friend_id"] = friendID
 	return data, nil
 }
