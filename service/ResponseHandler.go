@@ -1,7 +1,7 @@
 package service
 
 import (
-	"io/ioutil"
+	"io"
 	"net/http"
 	"runtime/debug"
 	"time"
@@ -22,7 +22,7 @@ func (s *Service) responseHandler(h handler) http.HandlerFunc {
 		}()
 
 		s.Logger.Infof("request begin: Method: %v, request url: %s", req.Method, req.Host+req.RequestURI)
-		reqBody, _ := ioutil.ReadAll(req.Body)
+		reqBody, _ := io.ReadAll(req.Body)
 		s.Logger.Infof("request body: %s", reqBody)
 		startTime := time.Now().UnixNano() / 1e6
 		data, err := h(w, req)

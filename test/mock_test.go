@@ -1,12 +1,16 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 	"user/model"
 	"user/pkg/logger"
 	"user/pkg/util"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type MockLogger struct{}
@@ -21,6 +25,12 @@ func (m *MockLogger) Warn(args ...interface{})                  {}
 func (m *MockLogger) Warnf(format string, args ...interface{})  {}
 
 var _ logger.Logger = (*MockLogger)(nil)
+
+func chiSetURLParam(r *http.Request, key, value string) *http.Request {
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add(key, value)
+	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx))
+}
 
 type MockUserDao struct {
 	Users  map[int]*model.User

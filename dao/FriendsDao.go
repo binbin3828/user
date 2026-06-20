@@ -1,11 +1,3 @@
-/*
- * @Autor: Bobby
- * @Description: friends dao
- * @Date: 2022-06-09 15:20:11
- * @LastEditTime: 2022-06-10 11:30:34
- * @FilePath: \user\dao\FriendsDao.go
- */
-
 package dao
 
 import (
@@ -14,17 +6,15 @@ import (
 	"user/pkg/logger"
 	"user/pkg/util"
 
-	"github.com/jinzhu/gorm"
+	"gorm.io/gorm"
 )
 
-// IFriendsDao 好友数据访问接口
 type IFriendsDao interface {
 	AddFriend(uid, fri int) error
 	GetFriendsList(uid int) ([]*model.RetListFriends, error)
 	GetNearbyFriend(uid int, subStr string) ([]*model.RetNearbyFriendsList, error)
 }
 
-// 编译期检查 FriendsDao 是否实现 IFriendsDao
 var _ IFriendsDao = (*FriendsDao)(nil)
 
 type FriendsDao struct {
@@ -49,8 +39,7 @@ func (T *FriendsDao) GetNearbyFriend(uid int, subStr string) ([]*model.RetNearby
 
 func (T *FriendsDao) GetFriendsList(uid int) ([]*model.RetListFriends, error) {
 	var list []*model.RetListFriends
-	sql := "select user.id as fri_uid,user.name as fri_name, friends.create_time from friends,user where friends.uid = ? AND friends.fri = user.id"
-	err := T.db.Raw(sql, uid).Scan(&list).Error
+	err := T.db.Raw("select user.id as fri_uid,user.name as fri_name, friends.create_time from friends,user where friends.uid = ? AND friends.fri = user.id", uid).Scan(&list).Error
 	if err != nil {
 		return list, err
 	}
@@ -70,13 +59,11 @@ func (T *FriendsDao) AddFriend(uid, fri int) error {
 	}
 
 	tx := T.db.Begin()
-	err := tx.Table("friends").Create(&friends1).Error
-	if err != nil {
+	if err := tx.Table("friends").Create(&friends1).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
-	err = tx.Table("friends").Create(&friends2).Error
-	if err != nil {
+	if err := tx.Table("friends").Create(&friends2).Error; err != nil {
 		tx.Rollback()
 		return err
 	}

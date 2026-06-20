@@ -7,8 +7,6 @@ import (
 	"user/model"
 	"user/pkg/util"
 	"user/service"
-
-	"github.com/gorilla/mux"
 )
 
 func newTestService() (*service.Service, *MockUserDao, *MockFriendsDao) {
@@ -24,7 +22,7 @@ func TestGetUser_Success(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby", Address: "shenzhen"}
 
 	req := httptest.NewRequest("GET", "/user/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.GetUser(w, req)
@@ -58,7 +56,7 @@ func TestGetUser_MissingUID(t *testing.T) {
 func TestGetUser_InvalidUID(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("GET", "/user/abc", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "abc"})
+	req = chiSetURLParam(req, "uid", "abc")
 	w := httptest.NewRecorder()
 
 	_, err := svc.GetUser(w, req)
@@ -70,7 +68,7 @@ func TestGetUser_InvalidUID(t *testing.T) {
 func TestGetUser_NotFound(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("GET", "/user/999", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "999"})
+	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
 
 	_, err := svc.GetUser(w, req)

@@ -4,8 +4,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"user/model"
-
-	"github.com/gorilla/mux"
 )
 
 func TestGetNearbyFriend_Success(t *testing.T) {
@@ -15,7 +13,7 @@ func TestGetNearbyFriend_Success(t *testing.T) {
 	friendsDao.AddFriend(1, 2)
 
 	req := httptest.NewRequest("GET", "/nearbyfriends/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.GetNearbyFriend(w, req)
@@ -55,7 +53,7 @@ func TestGetNearbyFriend_MissingUID(t *testing.T) {
 func TestGetNearbyFriend_UserNotFound(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("GET", "/nearbyfriends/999", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "999"})
+	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
 
 	_, err := svc.GetNearbyFriend(w, req)
@@ -69,7 +67,7 @@ func TestGetNearbyFriend_EmptyList(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0xxxxx"}
 
 	req := httptest.NewRequest("GET", "/nearbyfriends/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.GetNearbyFriend(w, req)

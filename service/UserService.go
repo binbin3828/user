@@ -1,33 +1,24 @@
-/*
- * @Autor: Bobby
- * @Description: User API service
- * @Date: 2022-06-06 11:02:06
- * @LastEditTime: 2022-06-16 14:41:16
- * @FilePath: \user\service\UserService.go
- */
-
 package service
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"strconv"
 	"user/constant"
 	"user/model"
 	"user/pkg/util"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/mmcloughlin/geohash"
-
-	"github.com/gorilla/mux"
 )
 
 func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	if _, ok := vars["uid"]; !ok {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "vars param uid not set")
+	uidStr := chi.URLParam(r, "uid")
+	if uidStr == "" {
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
 	}
-	uid, err := strconv.Atoi(vars["uid"])
+	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
 		return nil, err
 	}
@@ -39,7 +30,7 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, 
 }
 
 func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	reqBody, _ := ioutil.ReadAll(r.Body)
+	reqBody, _ := io.ReadAll(r.Body)
 	s.Logger.Infof("request body: %s", reqBody)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
@@ -61,7 +52,6 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 		user.Description = tmp
 	}
 
-	//calc geohash string
 	tmpLatitude, ok1 := data["latitude"].(float64)
 	if ok1 {
 		user.Latitude = tmpLatitude
@@ -71,7 +61,6 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 		user.Longitude = tmpLongitude
 	}
 	if ok1 && ok2 && tmpLatitude >= 0 && tmpLongitude >= 0 {
-		//当geohash base32编码长度为8时，精度在19米左右，而当编码长度为9时，精度在2米左右，编码长度需要根据数据情况进行选择
 		hash_base32 := geohash.EncodeWithPrecision(tmpLatitude, tmpLongitude, 8)
 		user.LocGeohash = hash_base32
 	}
@@ -80,10 +69,8 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 	if err != nil {
 		return nil, err
 	}
-	uid := user.Id
 
-	//find new user and return succ
-	info, err := s.UserDao.FindUser(uid)
+	info, err := s.UserDao.FindUser(user.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -91,8 +78,11 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 }
 
 func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	vars := mux.Vars(r)
-	uid, err := strconv.Atoi(vars["uid"])
+	uidStr := chi.URLParam(r, "uid")
+	if uidStr == "" {
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
+	}
+	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
 		return nil, err
 	}
@@ -100,19 +90,17 @@ func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{
 	if err != nil {
 		return nil, err
 	}
-	data := "delete succ"
-	return data, nil
+	return "delete succ", nil
 }
 
 func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	reqBody, _ := ioutil.ReadAll(r.Body)
+	reqBody, _ := io.ReadAll(r.Body)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
 
 	if _, ok := data["id"].(float64); !ok {
 		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "user id is must param")
 	}
-
 	uid := int(data["id"].(float64))
 
 	modifyArr := make(map[string]interface{})
@@ -129,7 +117,6 @@ func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{
 		modifyArr["description"] = tmp
 	}
 
-	//calc geohash string
 	tmpLatitude, ok1 := data["latitude"].(float64)
 	if ok1 {
 		modifyArr["latitude"] = tmpLatitude
@@ -139,7 +126,6 @@ func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{
 		modifyArr["longitude"] = tmpLongitude
 	}
 	if ok1 && ok2 && tmpLatitude >= 0 && tmpLongitude >= 0 {
-		//当geohash base32编码长度为8时，精度在19米左右，而当编码长度为9时，精度在2米左右，编码长度需要根据数据情况进行选择
 		hash_base32 := geohash.EncodeWithPrecision(tmpLatitude, tmpLongitude, 8)
 		modifyArr["loc_geohash"] = hash_base32
 	}
@@ -148,7 +134,6 @@ func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{
 	if err != nil {
 		return nil, err
 	}
-	//find new player and return
 	info, err := s.UserDao.FindUser(uid)
 	if err != nil {
 		return nil, err

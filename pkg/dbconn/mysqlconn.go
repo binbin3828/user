@@ -1,11 +1,3 @@
-/*
- * @Autor: Bobby
- * @Description: function for create and connect mysql pool
- * @Date: 2022-06-06 17:00:19
- * @LastEditTime: 2022-06-09 21:24:11
- * @FilePath: \user\pkg\dbconn\mysqlconn.go
- */
-
 package dbconn
 
 import (
@@ -13,8 +5,9 @@ import (
 	"user/pkg/config"
 	"user/pkg/logger"
 
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jinzhu/gorm"
+	"gorm.io/driver/mysql"
+	"gorm.io/gorm"
+	"gorm.io/gorm/schema"
 )
 
 type MysqlConf struct {
@@ -25,7 +18,6 @@ type MysqlConf struct {
 	MaxLifetime    int
 }
 
-// NewMysql 创建 MySQL 连接，返回 *gorm.DB 实例
 func NewMysql(log logger.Logger) (*gorm.DB, error) {
 	var mysqlConf MysqlConf
 	mysqlConf.DriveName = config.Get("config.mysql.driveName").(string)
@@ -40,18 +32,23 @@ func NewMysql(log logger.Logger) (*gorm.DB, error) {
 	log.Debugf("mysqlConf.MaxOpen : %v", mysqlConf.MaxOpen)
 	log.Debugf("mysqlConf.MaxLifetime : %v", mysqlConf.MaxLifetime)
 
-	db, err := gorm.Open(mysqlConf.DriveName, mysqlConf.DataSourceName)
+	gormLogger := &logger.GormLogger{Logger: log}
+
+	db, err := gorm.Open(mysql.Open(mysqlConf.DataSourceName), &gorm.Config{
+		NamingStrategy: schema.NamingStrategy{SingularTable: true},
+		Logger:         gormLogger,
+	})
 	if err != nil {
 		return nil, err
 	}
-	db.SingularTable(true)
-	db.DB().SetMaxIdleConns(mysqlConf.MaxIdle)
-	db.DB().SetMaxOpenConns(mysqlConf.MaxOpen)
-	db.DB().SetConnMaxLifetime(time.Duration(mysqlConf.MaxLifetime) * time.Hour)
 
-	gormLogger := &logger.GormLogger{Logger: log}
-	db.LogMode(true)
-	db.SetLogger(gormLogger)
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, err
+	}
+	sqlDB.SetMaxIdleConns(mysqlConf.MaxIdle)
+	sqlDB.SetMaxOpenConns(mysqlConf.MaxOpen)
+	sqlDB.SetConnMaxLifetime(time.Duration(mysqlConf.MaxLifetime) * time.Hour)
 
 	log.Debug("mysql init succ...")
 	return db, nil

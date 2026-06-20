@@ -4,8 +4,6 @@ import (
 	"net/http/httptest"
 	"testing"
 	"user/model"
-
-	"github.com/gorilla/mux"
 )
 
 func TestDeleteUser_Success(t *testing.T) {
@@ -13,7 +11,7 @@ func TestDeleteUser_Success(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby"}
 
 	req := httptest.NewRequest("DELETE", "/user/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.DeleteUser(w, req)
@@ -31,7 +29,7 @@ func TestDeleteUser_Success(t *testing.T) {
 func TestDeleteUser_InvalidUID(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("DELETE", "/user/abc", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "abc"})
+	req = chiSetURLParam(req, "uid", "abc")
 	w := httptest.NewRecorder()
 
 	_, err := svc.DeleteUser(w, req)
@@ -43,7 +41,7 @@ func TestDeleteUser_InvalidUID(t *testing.T) {
 func TestDeleteUser_NotFound(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("DELETE", "/user/999", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "999"})
+	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
 
 	_, err := svc.DeleteUser(w, req)

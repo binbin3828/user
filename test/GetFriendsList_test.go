@@ -4,19 +4,16 @@ import (
 	"net/http/httptest"
 	"testing"
 	"user/model"
-
-	"github.com/gorilla/mux"
 )
 
 func TestGetFriendsList_Success(t *testing.T) {
 	svc, userDao, friendsDao := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
-	// create bidirectional friendship
 	friendsDao.AddFriend(1, 2)
 
 	req := httptest.NewRequest("GET", "/friends/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.GetFriendsList(w, req)
@@ -56,7 +53,7 @@ func TestGetFriendsList_MissingUID(t *testing.T) {
 func TestGetFriendsList_UserNotFound(t *testing.T) {
 	svc, _, _ := newTestService()
 	req := httptest.NewRequest("GET", "/friends/999", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "999"})
+	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
 
 	_, err := svc.GetFriendsList(w, req)
@@ -70,7 +67,7 @@ func TestGetFriendsList_EmptyList(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	req := httptest.NewRequest("GET", "/friends/1", nil)
-	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
 
 	data, err := svc.GetFriendsList(w, req)
