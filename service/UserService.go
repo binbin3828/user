@@ -32,36 +32,26 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, 
 func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := io.ReadAll(r.Body)
 	s.Logger.Infof("request body: %s", reqBody)
-	data := make(map[string]interface{})
-	json.Unmarshal(reqBody, &data)
 
-	var user model.User
-	tmp, ok := data["name"].(string)
-	if !ok {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param name not set")
+	var req createUserReq
+	if err := json.Unmarshal(reqBody, &req); err != nil {
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, err.Error())
 	}
-	user.Name = tmp
-
-	if tmp, ok := data["dob"].(string); ok {
-		user.Dob = tmp
-	}
-	if tmp, ok := data["address"].(string); ok {
-		user.Address = tmp
-	}
-	if tmp, ok := data["description"].(string); ok {
-		user.Description = tmp
+	if err := validateReq(req); err != nil {
+		return nil, err
 	}
 
-	tmpLatitude, ok1 := data["latitude"].(float64)
-	if ok1 {
-		user.Latitude = tmpLatitude
+	user := model.User{
+		Name:        req.Name,
+		Dob:         req.Dob,
+		Address:     req.Address,
+		Description: req.Description,
+		Latitude:    req.Latitude,
+		Longitude:   req.Longitude,
 	}
-	tmpLongitude, ok2 := data["longitude"].(float64)
-	if ok2 {
-		user.Longitude = tmpLongitude
-	}
-	if ok1 && ok2 && tmpLatitude >= 0 && tmpLongitude >= 0 {
-		hash_base32 := geohash.EncodeWithPrecision(tmpLatitude, tmpLongitude, 8)
+
+	if req.Latitude >= 0 && req.Longitude >= 0 {
+		hash_base32 := geohash.EncodeWithPrecision(req.Latitude, req.Longitude, 8)
 		user.LocGeohash = hash_base32
 	}
 
@@ -95,13 +85,18 @@ func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{
 
 func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := io.ReadAll(r.Body)
+
+	var req modifyUserReq
+	if err := json.Unmarshal(reqBody, &req); err != nil {
+		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, err.Error())
+	}
+	if err := validateReq(req); err != nil {
+		return nil, err
+	}
+	uid := int(req.Id)
+
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
-
-	if _, ok := data["id"].(float64); !ok {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "user id is must param")
-	}
-	uid := int(data["id"].(float64))
 
 	modifyArr := make(map[string]interface{})
 	if tmp, ok := data["name"].(string); ok {

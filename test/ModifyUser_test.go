@@ -44,8 +44,8 @@ func TestModifyUser_MissingID(t *testing.T) {
 	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
 		t.Errorf("expected CodeError code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
 	}
-	if codeErr.Error() != "user id is must param" {
-		t.Errorf("expected 'user id is must param', got '%s'", codeErr.Error())
+	if codeErr.Error() != "param id not set" {
+		t.Errorf("expected 'param id not set', got '%s'", codeErr.Error())
 	}
 }
 
