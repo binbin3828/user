@@ -1,37 +1,86 @@
-/*
- * @Autor: Bobby
- * @Description: unit test ModifyUser
- * @Date: 2022-06-08 14:50:28
- * @LastEditTime: 2022-06-09 17:59:33
- * @FilePath: \user\test\ModifyUser_test.go
- */
 package test
 
 import (
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"net/http"
 	"strings"
+	"net/http/httptest"
 	"testing"
+	"user/constant"
+	"user/model"
+	"user/pkg/util"
 )
 
-// run test with the following command:
-// go test -v .\ModifyUser_test.go
-func TestModifyUser_Run(t *testing.T) {
-	url := "http://127.0.0.1:8080/user"
+func TestModifyUser_Success(t *testing.T) {
+	svc, userDao, _ := newTestService()
+	userDao.Users[1] = &model.User{Id: 1, Name: "old", Address: "beijing"}
 
-	user := make(map[string]interface{})
-	user["id"] = 4
-	// user["name"] = "bobby4"
-	// user["address"] = "shenzhen"
-	user["latitude"] = 39.911987
-	user["longitude"] = 116.414311
-	sbyte, _ := json.Marshal(user)
-	reader := strings.NewReader(string(sbyte))
-	req, _ := http.NewRequest("PUT", url, reader)
-	res, _ := http.DefaultClient.Do(req)
-	body, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(res.Status)
-	fmt.Println(string(body))
+	body := `{"id":1,"name":"new_name","address":"shanghai"}`
+	req := httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	data, err := svc.ModifyUser(w, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	user, ok := data.(*model.User)
+	if !ok {
+		t.Fatalf("expected *model.User, got %T", data)
+	}
+	if user.Name != "new_name" || user.Address != "shanghai" {
+		t.Errorf("got %+v, want name=new_name address=shanghai", user)
+	}
+}
+
+func TestModifyUser_MissingID(t *testing.T) {
+	svc, _, _ := newTestService()
+	body := `{"name":"bobby"}`
+	req := httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	_, err := svc.ModifyUser(w, req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	codeErr, ok := err.(*util.CodeError)
+	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
+		t.Errorf("expected CodeError code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
+	}
+	if codeErr.Error() != "user id is must param" {
+		t.Errorf("expected 'user id is must param', got '%s'", codeErr.Error())
+	}
+}
+
+func TestModifyUser_WithLocation(t *testing.T) {
+	svc, userDao, _ := newTestService()
+	userDao.Users[1] = &model.User{Id: 1, Name: "bobby"}
+
+	body := `{"id":1,"latitude":39.91,"longitude":116.41}`
+	req := httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	data, err := svc.ModifyUser(w, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	user := data.(*model.User)
+	if user.Latitude != 39.91 || user.Longitude != 116.41 {
+		t.Errorf("expected lat=39.91 lng=116.41, got %+v", user)
+	}
+	if user.LocGeohash == "" {
+		t.Error("expected geohash to be computed")
+	}
+}
+
+func TestModifyUser_NotFound(t *testing.T) {
+	svc, _, _ := newTestService()
+	body := `{"id":999,"name":"test"}`
+	req := httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	w := httptest.NewRecorder()
+
+	_, err := svc.ModifyUser(w, req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "record not found" {
+		t.Errorf("expected 'record not found', got '%v'", err)
+	}
 }

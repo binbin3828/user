@@ -1,26 +1,83 @@
-/*
- * @Autor: Bobby
- * @Description: unit test GetUser
- * @Date: 2022-06-08 11:45:03
- * @LastEditTime: 2022-06-08 14:57:07
- * @FilePath: \user\test\GetUser_test.go
- */
 package test
 
 import (
-	"fmt"
-	"io/ioutil"
-	"net/http"
+	"net/http/httptest"
 	"testing"
+	"user/constant"
+	"user/model"
+	"user/pkg/util"
+	"user/service"
+
+	"github.com/gorilla/mux"
 )
 
-// run test with the following command:
-// go test -v .\GetUser_test.go
-func TestGetUser_Run(t *testing.T) {
-	url := "http://127.0.0.1:8080/user/2"
-	req, _ := http.NewRequest("GET", url, nil)
-	res, _ := http.DefaultClient.Do(req)
-	body, _ := ioutil.ReadAll(res.Body)
-	fmt.Println(res.Status)
-	fmt.Println(string(body))
+func newTestService() (*service.Service, *MockUserDao, *MockFriendsDao) {
+	log := &MockLogger{}
+	userDao := NewMockUserDao()
+	friendsDao := NewMockFriendsDao()
+	svc := service.NewService(log, userDao, friendsDao)
+	return svc, userDao, friendsDao
+}
+
+func TestGetUser_Success(t *testing.T) {
+	svc, userDao, _ := newTestService()
+	userDao.Users[1] = &model.User{Id: 1, Name: "bobby", Address: "shenzhen"}
+
+	req := httptest.NewRequest("GET", "/user/1", nil)
+	req = mux.SetURLVars(req, map[string]string{"uid": "1"})
+	w := httptest.NewRecorder()
+
+	data, err := svc.GetUser(w, req)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	user, ok := data.(*model.User)
+	if !ok {
+		t.Fatalf("expected *model.User, got %T", data)
+	}
+	if user.Id != 1 || user.Name != "bobby" {
+		t.Errorf("got user %+v, want id=1 name=bobby", user)
+	}
+}
+
+func TestGetUser_MissingUID(t *testing.T) {
+	svc, _, _ := newTestService()
+	req := httptest.NewRequest("GET", "/user/", nil)
+	w := httptest.NewRecorder()
+
+	_, err := svc.GetUser(w, req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	codeErr, ok := err.(*util.CodeError)
+	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
+		t.Errorf("expected CodeError with code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
+	}
+}
+
+func TestGetUser_InvalidUID(t *testing.T) {
+	svc, _, _ := newTestService()
+	req := httptest.NewRequest("GET", "/user/abc", nil)
+	req = mux.SetURLVars(req, map[string]string{"uid": "abc"})
+	w := httptest.NewRecorder()
+
+	_, err := svc.GetUser(w, req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+}
+
+func TestGetUser_NotFound(t *testing.T) {
+	svc, _, _ := newTestService()
+	req := httptest.NewRequest("GET", "/user/999", nil)
+	req = mux.SetURLVars(req, map[string]string{"uid": "999"})
+	w := httptest.NewRecorder()
+
+	_, err := svc.GetUser(w, req)
+	if err == nil {
+		t.Fatal("expected error, got nil")
+	}
+	if err.Error() != "record not found" {
+		t.Errorf("expected 'record not found', got '%v'", err)
+	}
 }
