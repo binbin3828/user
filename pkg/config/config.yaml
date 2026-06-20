@@ -12,6 +12,6 @@ jwt:
   secret: change-me-in-production-use-a-long-random-string
 
 tls:
-  enabled: false
-  certFile: ""
-  keyFile: ""
+  enabled: true
+  certFile: "cert.pem"
+  keyFile: "key.pem"

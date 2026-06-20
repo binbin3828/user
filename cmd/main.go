@@ -50,27 +50,55 @@ func main() {
 	svc := service.NewService(zapLog, userDao, friendsDao)
 	router := service.NewRouter(svc)
 
-	server := &http.Server{
-		Addr:    ":8080",
-		Handler: router,
-	}
+	tlsEnabled, _ := config.Get("config.tls.enabled").(bool)
+	certFile, _ := config.Get("config.tls.certFile").(string)
+	keyFile, _ := config.Get("config.tls.keyFile").(string)
 
-	go func() {
-		zapLog.Infof("server starting on :8080")
+	tlsConfigured := tlsEnabled && certFile != "" && keyFile != ""
 
-		tlsEnabled, _ := config.Get("config.tls.enabled").(bool)
-		if tlsEnabled {
-			certFile, _ := config.Get("config.tls.certFile").(string)
-			keyFile, _ := config.Get("config.tls.keyFile").(string)
-			if err := server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("server error: %v", err)
-			}
-		} else {
-			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-				log.Fatalf("server error: %v", err)
-			}
+	var httpsServer *http.Server
+	var httpServer *http.Server
+
+	if tlsConfigured {
+		httpsServer = &http.Server{
+			Addr:    ":443",
+			Handler: router,
 		}
-	}()
+
+		redirectHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			target := "https://" + r.Host + r.URL.String()
+			http.Redirect(w, r, target, http.StatusMovedPermanently)
+		})
+		httpServer = &http.Server{
+			Addr:    ":8080",
+			Handler: redirectHandler,
+		}
+
+		go func() {
+			zapLog.Infof("HTTPS server starting on :443")
+			if err := httpsServer.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("HTTPS server error: %v", err)
+			}
+		}()
+		go func() {
+			zapLog.Infof("HTTP redirect server starting on :8080 -> :443")
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("HTTP redirect server error: %v", err)
+			}
+		}()
+	} else {
+		zapLog.Warnf("TLS not configured (enabled=%v, cert=%v, key=%v), serving HTTP on :8080", tlsEnabled, certFile != "", keyFile != "")
+		httpServer = &http.Server{
+			Addr:    ":8080",
+			Handler: router,
+		}
+		go func() {
+			zapLog.Infof("HTTP server starting on :8080")
+			if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("HTTP server error: %v", err)
+			}
+		}()
+	}
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -80,8 +108,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := server.Shutdown(ctx); err != nil {
-		zapLog.Errorf("server shutdown error: %v", err)
+	if httpsServer != nil {
+		if err := httpsServer.Shutdown(ctx); err != nil {
+			zapLog.Errorf("HTTPS server shutdown error: %v", err)
+		}
+	}
+	if httpServer != nil {
+		if err := httpServer.Shutdown(ctx); err != nil {
+			zapLog.Errorf("HTTP server shutdown error: %v", err)
+		}
 	}
 
 	sqlDB, err = db.DB()

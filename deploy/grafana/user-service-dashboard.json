@@ -1,0 +1,182 @@
+{
+  "title": "User Service",
+  "version": 1,
+  "uid": "user-service",
+  "tags": ["user-service", "go"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "panels": [
+    {
+      "title": "HTTP Request Rate",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{path!=\"/metrics\"}[5m])) by (method, path, status)",
+          "legendFormat": "{{method}} {{path}} {{status}}",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "HTTP request rate per method, path and status code"
+    },
+    {
+      "title": "HTTP P99 Latency",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method, path))",
+          "legendFormat": "{{method}} {{path}}",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "P99 latency per endpoint"
+    },
+    {
+      "title": "HTTP Error Rate (5xx)",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total{status=~\"5..\"}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+          "legendFormat": "error rate %",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Percentage of HTTP 5xx responses"
+    },
+    {
+      "title": "Business Metrics",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "rate(login_attempts_total[5m])",
+          "legendFormat": "login {{status}}",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "rate(user_creations_total[5m])",
+          "legendFormat": "user registrations",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "rate(friend_additions_total[5m])",
+          "legendFormat": "friend additions",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Business event rates: login, registration, friend additions"
+    },
+    {
+      "title": "DB Connection Pool",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 8},
+      "targets": [
+        {
+          "expr": "db_connections_open",
+          "legendFormat": "open",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "db_connections_in_use",
+          "legendFormat": "in_use",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "db_connections_idle",
+          "legendFormat": "idle",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "db_connections_max_open",
+          "legendFormat": "max_open",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Database connection pool status"
+    },
+    {
+      "title": "Go Routines",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 16},
+      "targets": [
+        {
+          "expr": "go_goroutines",
+          "legendFormat": "goroutines",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Number of goroutines"
+    },
+    {
+      "title": "Go Memory",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 16},
+      "targets": [
+        {
+          "expr": "go_memstats_alloc_bytes",
+          "legendFormat": "alloc",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "go_memstats_heap_inuse_bytes",
+          "legendFormat": "heap_inuse",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "go_memstats_stack_inuse_bytes",
+          "legendFormat": "stack_inuse",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Memory usage: alloc, heap, stack"
+    },
+    {
+      "title": "Go GC Duration",
+      "type": "graph",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 16},
+      "targets": [
+        {
+          "expr": "rate(go_gc_duration_seconds_sum[5m])",
+          "legendFormat": "gc rate",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "GC duration rate"
+    },
+    {
+      "title": "HTTP Requests In Flight",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 12, "x": 0, "y": 24},
+      "targets": [
+        {
+          "expr": "http_requests_in_flight",
+          "legendFormat": "in_flight",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "Current number of concurrent HTTP requests"
+    },
+    {
+      "title": "DB Wait Duration",
+      "type": "graph",
+      "gridPos": {"h": 6, "w": 12, "x": 12, "y": 24},
+      "targets": [
+        {
+          "expr": "rate(db_connections_wait_duration_seconds_total[5m])",
+          "legendFormat": "wait dur/s",
+          "intervalFactor": 2
+        },
+        {
+          "expr": "rate(db_connections_wait_count_total[5m])",
+          "legendFormat": "wait count/s",
+          "intervalFactor": 2
+        }
+      ],
+      "description": "DB connection wait duration and count"
+    }
+  ],
+  "schemaVersion": 27
+}

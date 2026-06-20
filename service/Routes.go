@@ -39,5 +39,12 @@ func NewRouter(s *Service) *gin.Engine {
 		auth.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
 	}
 
+	// Example: admin-only routes (uncomment when admin handler exists)
+	// admin := r.Group("/admin")
+	// admin.Use(s.AuthRequired(), s.RequireRole("admin"))
+	// {
+	// 	admin.GET("/users", s.ListAllUsers)
+	// }
+
 	return r
 }

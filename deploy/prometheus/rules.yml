@@ -1,0 +1,88 @@
+groups:
+  - name: user-service
+    interval: 30s
+    rules:
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_requests_total{status=~"5..",path!="/metrics"}[5m]))
+          /
+          sum(rate(http_requests_total{path!="/metrics"}[5m]))
+          * 100 > 5
+        for: 3m
+        labels:
+          severity: critical
+          service: user-service
+        annotations:
+          summary: "HTTP 5xx error rate exceeds 5%"
+          description: "Error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: HighLatency
+        expr: |
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+          > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: user-service
+        annotations:
+          summary: "P99 latency exceeds 2s"
+          description: "P99 latency is {{ $value }}s over the last 5 minutes"
+
+      - alert: DBConnectionPoolExhaustion
+        expr: |
+          db_connections_in_use / db_connections_max_open > 0.8
+        for: 2m
+        labels:
+          severity: warning
+          service: user-service
+        annotations:
+          summary: "DB connection pool near exhaustion"
+          description: "{{ $value | humanizePercentage }} of DB connections are in use"
+
+      - alert: HighGoroutineCount
+        expr: |
+          go_goroutines > 10000
+        for: 5m
+        labels:
+          severity: warning
+          service: user-service
+        annotations:
+          summary: "Goroutine count exceeds 10000"
+          description: "Current goroutine count is {{ $value }}"
+
+      - alert: DBNotReady
+        expr: |
+          db_connections_open == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: user-service
+        annotations:
+          summary: "No open database connections"
+          description: "Database connection count is 0"
+
+      - alert: HighLoginFailureRate
+        expr: |
+          rate(login_attempts_total{status="fail"}[5m])
+          /
+          (rate(login_attempts_total{status="fail"}[5m]) + rate(login_attempts_total{status="success"}[5m]))
+          > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: user-service
+        annotations:
+          summary: "High login failure rate"
+          description: "Login failure rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: InstanceDown
+        expr: |
+          up{job="user-service"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          service: user-service
+        annotations:
+          summary: "User service instance is down"
+          description: "Instance {{ $labels.instance }} has been unreachable for 1 minute"

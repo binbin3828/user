@@ -196,6 +196,31 @@ func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
 	}
 }
 
+func (s *Service) RequireRole(roles ...string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		role, exists := c.Get("role")
+		if !exists {
+			s.returnError(c, constant.ERROR_AUTH_FAIL, "authentication required")
+			c.Abort()
+			return
+		}
+		roleStr, ok := role.(string)
+		if !ok {
+			s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+			c.Abort()
+			return
+		}
+		for _, r := range roles {
+			if roleStr == r {
+				c.Next()
+				return
+			}
+		}
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		c.Abort()
+	}
+}
+
 func (s *Service) AuditLog() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next()
