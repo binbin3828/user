@@ -22,15 +22,13 @@ type Routes []Route
 // AllRoutes 根据注入的 Service 构建所有路由
 func AllRoutes(s *Service) Routes {
 	return Routes{
-		//user
-		Route{Name: "User", Method: "GET", Pattern: "/user/{uid}", HandlerFunc: responseHandler(s.GetUser)},
-		Route{Name: "User", Method: "POST", Pattern: "/user", HandlerFunc: responseHandler(s.CreateUser)},
-		Route{Name: "User", Method: "DELETE", Pattern: "/user/{uid}", HandlerFunc: responseHandler(s.DeleteUser)},
-		Route{Name: "User", Method: "PUT", Pattern: "/user", HandlerFunc: responseHandler(s.ModifyUser)},
+		Route{Name: "User", Method: "GET", Pattern: "/user/{uid}", HandlerFunc: s.responseHandler(s.GetUser)},
+		Route{Name: "User", Method: "POST", Pattern: "/user", HandlerFunc: s.responseHandler(s.CreateUser)},
+		Route{Name: "User", Method: "DELETE", Pattern: "/user/{uid}", HandlerFunc: s.responseHandler(s.DeleteUser)},
+		Route{Name: "User", Method: "PUT", Pattern: "/user", HandlerFunc: s.responseHandler(s.ModifyUser)},
 
-		//friends
-		Route{Name: "Friends", Method: "POST", Pattern: "/friends", HandlerFunc: responseHandler(s.AddFriend)},
-		Route{Name: "Friends", Method: "GET", Pattern: "/friends/{uid}", HandlerFunc: responseHandler(s.GetFriendsList)},
-		Route{Name: "NearbyFriends", Method: "GET", Pattern: "/nearbyfriends/{uid}", HandlerFunc: responseHandler(s.GetNearbyFriend)},
+		Route{Name: "Friends", Method: "POST", Pattern: "/friends", HandlerFunc: s.responseHandler(s.AddFriend)},
+		Route{Name: "Friends", Method: "GET", Pattern: "/friends/{uid}", HandlerFunc: s.responseHandler(s.GetFriendsList)},
+		Route{Name: "NearbyFriends", Method: "GET", Pattern: "/nearbyfriends/{uid}", HandlerFunc: s.responseHandler(s.GetNearbyFriend)},
 	}
 }

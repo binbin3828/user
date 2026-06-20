@@ -7,18 +7,23 @@
 
 package service
 
-import "user/dao"
+import (
+	"user/dao"
+	"user/pkg/logger"
+)
 
-// Service 持有各 DAO 接口，通过构造函数注入依赖
+// Service 持有各 DAO 接口和日志，通过构造函数注入依赖
 type Service struct {
-	UserDao    dao.IUserDao
-	FriendsDao dao.IFriendsDao
+	Logger      logger.Logger
+	UserDao     dao.IUserDao
+	FriendsDao  dao.IFriendsDao
 }
 
-// NewService 创建 Service 实例，注入 DAO 依赖
-func NewService(userDao dao.IUserDao, friendsDao dao.IFriendsDao) *Service {
+// NewService 创建 Service 实例，注入依赖
+func NewService(log logger.Logger, userDao dao.IUserDao, friendsDao dao.IFriendsDao) *Service {
 	return &Service{
-		UserDao:    userDao,
-		FriendsDao: friendsDao,
+		Logger:      log,
+		UserDao:     userDao,
+		FriendsDao:  friendsDao,
 	}
 }

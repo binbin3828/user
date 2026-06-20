@@ -5,6 +5,7 @@
  * @LastEditTime: 2022-06-09 22:46:55
  * @FilePath: \user\pkg\logger\GormLogger.go
  */
+
 package logger
 
 import (
@@ -23,9 +24,10 @@ var (
 )
 
 type GormLogger struct {
+	Logger Logger
 }
 
-func (logger *GormLogger) Print(values ...interface{}) {
+func (l *GormLogger) Print(values ...interface{}) {
 	var messages []interface{}
 	if len(values) > 1 {
 		var (
@@ -39,18 +41,13 @@ func (logger *GormLogger) Print(values ...interface{}) {
 		messages = []interface{}{source, currentTime}
 
 		if len(values) == 2 {
-			//remove the line break
 			currentTime = currentTime[1:]
-			//remove the brackets
 			source = fmt.Sprintf("\033[35m%v\033[0m", values[1])
-
 			messages = []interface{}{currentTime, source}
 		}
 
 		if level == "sql" {
-			// duration
 			messages = append(messages, fmt.Sprintf(" \033[36;1m[%.2fms]\033[0m ", float64(values[2].(time.Duration).Nanoseconds()/1e4)/100.0))
-			// sql
 
 			for _, value := range values[4].([]interface{}) {
 				indirectValue := reflect.Indirect(reflect.ValueOf(value))
@@ -87,7 +84,6 @@ func (logger *GormLogger) Print(values ...interface{}) {
 				}
 			}
 
-			// differentiate between $n placeholders or else treat like ?
 			if numericPlaceHolderRegexp.MatchString(values[3].(string)) {
 				sql = values[3].(string)
 				for index, value := range formattedValues {
@@ -112,7 +108,7 @@ func (logger *GormLogger) Print(values ...interface{}) {
 			messages = append(messages, "\033[0m")
 		}
 	}
-	SugarLogger.Info(messages...)
+	l.Logger.Info(messages...)
 }
 
 func isPrintable(s string) bool {

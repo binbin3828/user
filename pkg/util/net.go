@@ -42,20 +42,16 @@ type SuccMsg struct {
 	Data interface{} `json:"data"`
 }
 
-func ReturnError(w http.ResponseWriter, errCode int, msg string) {
-	var errMsg ErrMsg
-	errMsg.Code = errCode
-	errMsg.Msg = msg
+func ReturnError(w http.ResponseWriter, log logger.Logger, errCode int, msg string) {
+	errMsg := ErrMsg{Code: errCode, Msg: msg}
 	json.NewEncoder(w).Encode(errMsg)
 	bstr, _ := json.Marshal(errMsg)
-	logger.SugarLogger.Error("return err:", string(bstr))
+	log.Error("return err:", string(bstr))
 }
 
-func ReturnSucc(w http.ResponseWriter, data interface{}) {
-	var succMsg SuccMsg
-	succMsg.Code = 0
-	succMsg.Data = data
+func ReturnSucc(w http.ResponseWriter, log logger.Logger, data interface{}) {
+	succMsg := SuccMsg{Code: 0, Data: data}
 	json.NewEncoder(w).Encode(succMsg)
 	bstr, _ := json.Marshal(succMsg)
-	logger.SugarLogger.Info("return succ:", string(bstr))
+	log.Info("return succ:", string(bstr))
 }

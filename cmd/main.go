@@ -20,16 +20,22 @@ import (
 )
 
 func main() {
-	logger.InitLogger()
-	defer logger.SugarLogger.Sync()
-	dbconn.InitMysql()
+	// 创建日志实例
+	zapLog := logger.NewZapLogger()
+	defer zapLog.Sync()
 
-	// 创建 DAO 实例
-	userDao := &dao.UserDao{}
-	friendsDao := &dao.FriendsDao{}
+	// 创建 MySQL 连接
+	db, err := dbconn.NewMysql(zapLog)
+	if err != nil {
+		log.Fatalf("mysql init failed: %v", err)
+	}
 
-	// 创建 Service 并注入 DAO 依赖
-	svc := service.NewService(userDao, friendsDao)
+	// 创建 DAO 实例，注入 db 和 logger
+	userDao := dao.NewUserDao(db, zapLog)
+	friendsDao := dao.NewFriendsDao(db, zapLog)
+
+	// 创建 Service 并注入依赖
+	svc := service.NewService(zapLog, userDao, friendsDao)
 
 	router := NewRouter(svc)
 	log.Fatal(http.ListenAndServe(":8080", router))

@@ -5,6 +5,7 @@
  * @LastEditTime: 2022-06-09 21:24:11
  * @FilePath: \user\pkg\dbconn\mysqlconn.go
  */
+
 package dbconn
 
 import (
@@ -19,18 +20,13 @@ import (
 type MysqlConf struct {
 	DriveName      string
 	DataSourceName string
-	MaxIdle        int // Set the maximum number of connections in the free connection pool
-	MaxOpen        int // Set the maximum number of open database connections
-	MaxLifetime    int // Set the maximum time that the connection can be reused
+	MaxIdle        int
+	MaxOpen        int
+	MaxLifetime    int
 }
 
-var db = new(gorm.DB)
-
-func GetMysql() *gorm.DB {
-	return db
-}
-
-func InitMysql() {
+// NewMysql 创建 MySQL 连接，返回 *gorm.DB 实例
+func NewMysql(log logger.Logger) (*gorm.DB, error) {
 	var mysqlConf MysqlConf
 	mysqlConf.DriveName = config.Get("config.mysql.driveName").(string)
 	mysqlConf.DataSourceName = config.Get("config.mysql.dataSourceName").(string)
@@ -38,25 +34,25 @@ func InitMysql() {
 	mysqlConf.MaxOpen = config.Get("config.mysql.maxOpen").(int)
 	mysqlConf.MaxLifetime = config.Get("config.mysql.maxLifetime").(int)
 
-	logger.SugarLogger.Debug("read mysql config...")
-	logger.SugarLogger.Debugf("mysqlConf.DriveName : %v", mysqlConf.DriveName)
-	logger.SugarLogger.Debugf("mysqlConf.MaxIdle : %v", mysqlConf.MaxIdle)
-	logger.SugarLogger.Debugf("mysqlConf.MaxOpen : %v", mysqlConf.MaxOpen)
-	logger.SugarLogger.Debugf("mysqlConf.MaxLifetime : %v", mysqlConf.MaxLifetime)
+	log.Debug("read mysql config...")
+	log.Debugf("mysqlConf.DriveName : %v", mysqlConf.DriveName)
+	log.Debugf("mysqlConf.MaxIdle : %v", mysqlConf.MaxIdle)
+	log.Debugf("mysqlConf.MaxOpen : %v", mysqlConf.MaxOpen)
+	log.Debugf("mysqlConf.MaxLifetime : %v", mysqlConf.MaxLifetime)
 
-	var err error
-	db, err = gorm.Open(mysqlConf.DriveName, mysqlConf.DataSourceName)
+	db, err := gorm.Open(mysqlConf.DriveName, mysqlConf.DataSourceName)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	db.SingularTable(true)
 	db.DB().SetMaxIdleConns(mysqlConf.MaxIdle)
 	db.DB().SetMaxOpenConns(mysqlConf.MaxOpen)
 	db.DB().SetConnMaxLifetime(time.Duration(mysqlConf.MaxLifetime) * time.Hour)
 
-	gormLogger := &logger.GormLogger{}
+	gormLogger := &logger.GormLogger{Logger: log}
 	db.LogMode(true)
 	db.SetLogger(gormLogger)
 
-	logger.SugarLogger.Debug("mysql init succ...")
+	log.Debug("mysql init succ...")
+	return db, nil
 }

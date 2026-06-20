@@ -5,13 +5,16 @@
  * @LastEditTime: 2022-06-09 15:15:52
  * @FilePath: \user\dao\UserDao.go
  */
+
 package dao
 
 import (
 	"time"
 	"user/model"
-	"user/pkg/dbconn"
+	"user/pkg/logger"
 	"user/pkg/util"
+
+	"github.com/jinzhu/gorm"
 )
 
 // IUserDao 用户数据访问接口
@@ -26,11 +29,17 @@ type IUserDao interface {
 var _ IUserDao = (*UserDao)(nil)
 
 type UserDao struct {
+	db     *gorm.DB
+	logger logger.Logger
+}
+
+func NewUserDao(db *gorm.DB, log logger.Logger) *UserDao {
+	return &UserDao{db: db, logger: log}
 }
 
 func (T *UserDao) CreateUser(user *model.User) error {
 	user.CreateAt = util.JsonTime(time.Now())
-	err := dbconn.GetMysql().Table("user").Create(user).Error
+	err := T.db.Table("user").Create(user).Error
 	if err != nil {
 		return err
 	}
@@ -39,7 +48,7 @@ func (T *UserDao) CreateUser(user *model.User) error {
 
 func (T *UserDao) FindUser(id int) (*model.User, error) {
 	var user model.User
-	err := dbconn.GetMysql().
+	err := T.db.
 		Table("user").
 		Select("*").
 		Where("id=?", id).
@@ -51,7 +60,7 @@ func (T *UserDao) FindUser(id int) (*model.User, error) {
 }
 
 func (T *UserDao) DeleteUser(uid int) error {
-	err := dbconn.GetMysql().
+	err := T.db.
 		Table("user").
 		Where("id=?", uid).
 		Delete(&model.User{}).Error
@@ -59,7 +68,7 @@ func (T *UserDao) DeleteUser(uid int) error {
 }
 
 func (T *UserDao) UpdateUser(uid int, modifyArr map[string]interface{}) error {
-	err := dbconn.GetMysql().
+	err := T.db.
 		Table("user").
 		Where("id=?", uid).
 		Updates(modifyArr).Error

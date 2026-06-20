@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"user/constant"
 	"user/model"
-	"user/pkg/logger"
 	"user/pkg/util"
 
 	"github.com/mmcloughlin/geohash"
@@ -41,7 +40,7 @@ func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, 
 
 func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	reqBody, _ := ioutil.ReadAll(r.Body)
-	logger.SugarLogger.Infof("request body: %s", reqBody)
+	s.Logger.Infof("request body: %s", reqBody)
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
 
