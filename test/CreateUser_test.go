@@ -16,6 +16,7 @@ func TestCreateUser_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/user", strings.NewReader(body))
+	authContextSet(c, 0)
 
 	svc.CreateUser(c)
 
@@ -60,6 +61,7 @@ func TestCreateUser_WithLocation(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/user", strings.NewReader(body))
+	authContextSet(c, 0)
 
 	svc.CreateUser(c)
 
@@ -84,6 +86,7 @@ func TestCreateUser_NegativeLocation(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/user", strings.NewReader(body))
+	authContextSet(c, 0)
 
 	svc.CreateUser(c)
 
@@ -106,6 +109,7 @@ func TestCreateUser_DAOCreateError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/user", strings.NewReader(body))
+	authContextSet(c, 0)
 
 	svc.CreateUser(c)
 
@@ -114,7 +118,7 @@ func TestCreateUser_DAOCreateError(t *testing.T) {
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
 	}
-	if resp["msg"] != "db error" {
-		t.Errorf("expected 'db error', got '%v'", resp["msg"])
+	if resp["msg"] != "internal error" {
+		t.Errorf("expected 'internal error', got '%v'", resp["msg"])
 	}
 }

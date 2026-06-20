@@ -8,7 +8,13 @@ import (
 	"user/model"
 	"user/pkg/logger"
 	"user/pkg/util"
+
+	"github.com/gin-gonic/gin"
 )
+
+func authContextSet(c *gin.Context, userID int) {
+	c.Set("user_id", userID)
+}
 
 type MockLogger struct{}
 
@@ -27,10 +33,11 @@ type MockUserDao struct {
 	Users  map[int]*model.User
 	nextID int
 
-	CreateUserErr error
-	FindUserErr   error
-	DeleteUserErr error
-	UpdateUserErr error
+	CreateUserErr   error
+	FindUserErr     error
+	FindByNameErr   error
+	DeleteUserErr   error
+	UpdateUserErr   error
 }
 
 func NewMockUserDao() *MockUserDao {
@@ -60,6 +67,18 @@ func (m *MockUserDao) FindUser(ctx context.Context, id int) (*model.User, error)
 		return nil, errors.New("record not found")
 	}
 	return user, nil
+}
+
+func (m *MockUserDao) FindUserByName(ctx context.Context, name string) (*model.User, error) {
+	if m.FindByNameErr != nil {
+		return nil, m.FindByNameErr
+	}
+	for _, u := range m.Users {
+		if u.Name == name {
+			return u, nil
+		}
+	}
+	return nil, errors.New("record not found")
 }
 
 func (m *MockUserDao) DeleteUser(ctx context.Context, uid int) error {
@@ -143,7 +162,6 @@ func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.
 		}
 	}
 	if list == nil {
-		// return empty slice, not nil, so JSON serializes as [] not null
 		return []*model.RetListFriends{}, nil
 	}
 	return list, nil

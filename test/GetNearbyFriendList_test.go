@@ -20,6 +20,7 @@ func TestGetNearbyFriend_Success(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetNearbyFriend(c)
 
@@ -64,6 +65,7 @@ func TestGetNearbyFriend_UserNotFound(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/999", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "999"}}
+	authContextSet(c, 999)
 
 	svc.GetNearbyFriend(c)
 
@@ -82,6 +84,7 @@ func TestGetNearbyFriend_EmptyList(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetNearbyFriend(c)
 
@@ -108,6 +111,7 @@ func TestGetNearbyFriend_WithPrecision(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/1?precision=4", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetNearbyFriend(c)
 
@@ -132,6 +136,7 @@ func TestGetNearbyFriend_InvalidPrecision(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/1?precision=abc", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetNearbyFriend(c)
 

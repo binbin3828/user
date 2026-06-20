@@ -18,6 +18,7 @@ func TestModifyUser_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	authContextSet(c, 1)
 
 	svc.ModifyUser(c)
 
@@ -57,6 +58,7 @@ func TestModifyUser_WithLocation(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	authContextSet(c, 1)
 
 	svc.ModifyUser(c)
 
@@ -81,6 +83,7 @@ func TestModifyUser_NotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("PUT", "/user", strings.NewReader(body))
+	authContextSet(c, 999)
 
 	svc.ModifyUser(c)
 
@@ -89,7 +92,7 @@ func TestModifyUser_NotFound(t *testing.T) {
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
 	}
-	if resp["msg"] != "record not found" {
-		t.Errorf("expected 'record not found', got '%v'", resp["msg"])
+	if resp["msg"] != "internal error" {
+		t.Errorf("expected 'internal error', got '%v'", resp["msg"])
 	}
 }

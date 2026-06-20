@@ -4,6 +4,11 @@ mysql:
   maxIdle: 25
   maxOpen: 50
   maxLifetime: 1
-  
 
+jwt:
+  secret: change-me-in-production-use-a-long-random-string
 
+tls:
+  enabled: false
+  certFile: ""
+  keyFile: ""

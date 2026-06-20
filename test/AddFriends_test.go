@@ -20,6 +20,7 @@ func TestAddFriend_Success(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
+	authContextSet(c, 1)
 
 	svc.AddFriend(c)
 
@@ -87,6 +88,7 @@ func TestAddFriend_UserNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
+	authContextSet(c, 999)
 
 	svc.AddFriend(c)
 
@@ -94,6 +96,10 @@ func TestAddFriend_UserNotFound(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
+	}
+	// should not reveal which user doesn't exist
+	if resp["msg"] != "invalid friend request" {
+		t.Errorf("expected 'invalid friend request', got '%v'", resp["msg"])
 	}
 }
 
@@ -105,6 +111,7 @@ func TestAddFriend_FriendNotFound(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
+	authContextSet(c, 1)
 
 	svc.AddFriend(c)
 
@@ -112,6 +119,9 @@ func TestAddFriend_FriendNotFound(t *testing.T) {
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
+	}
+	if resp["msg"] != "invalid friend request" {
+		t.Errorf("expected 'invalid friend request', got '%v'", resp["msg"])
 	}
 }
 
@@ -125,6 +135,7 @@ func TestAddFriend_DAOAddError(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
+	authContextSet(c, 1)
 
 	svc.AddFriend(c)
 
@@ -133,7 +144,8 @@ func TestAddFriend_DAOAddError(t *testing.T) {
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
 	}
-	if resp["msg"] != "db error" {
-		t.Errorf("expected 'db error', got '%v'", resp["msg"])
+	// DAO error sanitized to generic message
+	if resp["msg"] != "internal error" {
+		t.Errorf("expected 'internal error', got '%v'", resp["msg"])
 	}
 }

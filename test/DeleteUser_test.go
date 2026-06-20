@@ -17,6 +17,7 @@ func TestDeleteUser_Success(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("DELETE", "/user/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.DeleteUser(c)
 
@@ -56,6 +57,7 @@ func TestDeleteUser_NotFound(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("DELETE", "/user/999", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "999"}}
+	authContextSet(c, 999)
 
 	svc.DeleteUser(c)
 
@@ -64,7 +66,7 @@ func TestDeleteUser_NotFound(t *testing.T) {
 	if int(resp["code"].(float64)) == 0 {
 		t.Fatal("expected error, got success")
 	}
-	if resp["msg"] != "record not found" {
-		t.Errorf("expected 'record not found', got '%v'", resp["msg"])
+	if resp["msg"] != "internal error" {
+		t.Errorf("expected 'internal error', got '%v'", resp["msg"])
 	}
 }

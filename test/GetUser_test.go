@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 	"user/model"
+	"user/constant"
 	"user/service"
 
 	"github.com/gin-gonic/gin"
@@ -30,6 +31,7 @@ func TestGetUser_Success(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/user/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetUser(c)
 
@@ -50,7 +52,6 @@ func TestGetUser_MissingUID(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/user/", nil)
-	// no params, so c.Param("uid") returns ""
 
 	svc.GetUser(c)
 
@@ -88,10 +89,11 @@ func TestGetUser_NotFound(t *testing.T) {
 
 	var resp map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if int(resp["code"].(float64)) == 0 {
-		t.Fatal("expected error, got success")
+	code := int(resp["code"].(float64))
+	if code != constant.ERROR_PERMISSION_DENIED {
+		t.Errorf("expected code=%d, got %d", constant.ERROR_PERMISSION_DENIED, code)
 	}
-	if resp["msg"] != "record not found" {
-		t.Errorf("expected 'record not found', got '%v'", resp["msg"])
+	if resp["msg"] != "user not found" {
+		t.Errorf("expected 'user not found', got '%v'", resp["msg"])
 	}
 }

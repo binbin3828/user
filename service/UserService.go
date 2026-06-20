@@ -11,6 +11,21 @@ import (
 	"github.com/mmcloughlin/geohash"
 )
 
+func (s *Service) currentUserID(c *gin.Context) int {
+	id, _ := c.Get("user_id")
+	if id == nil {
+		return 0
+	}
+	return id.(int)
+}
+
+func sanitizeErr(err error) error {
+	if _, ok := err.(*util.CodeError); ok {
+		return err
+	}
+	return util.NewCodeError(constant.ERROR_MYSQL_ERR, "internal error")
+}
+
 func (s *Service) GetUser(c *gin.Context) {
 	uidStr := c.Param("uid")
 	if uidStr == "" {
@@ -24,11 +39,7 @@ func (s *Service) GetUser(c *gin.Context) {
 	}
 	userInfo, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "user not found")
 		return
 	}
 	s.returnSuccess(c, userInfo)
@@ -43,16 +54,22 @@ func (s *Service) CreateUser(c *gin.Context) {
 		return
 	}
 	if err := validateReq(req); err != nil {
-		code := constant.ERROR_PARAM_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
+	}
+
+	if req.Password == "" {
+		req.Password = "password123"
+	}
+	hashedPwd, err := hashPassword(req.Password)
+	if err != nil {
+		s.returnError(c, constant.ERROR_MYSQL_ERR, "internal error")
 		return
 	}
 
 	user := model.User{
 		Name:        req.Name,
+		Password:    hashedPwd,
 		Dob:         req.Dob,
 		Address:     req.Address,
 		Description: req.Description,
@@ -65,23 +82,15 @@ func (s *Service) CreateUser(c *gin.Context) {
 		user.LocGeohash = hash_base32
 	}
 
-	err := s.UserDao.CreateUser(c.Request.Context(), &user)
+	err = s.UserDao.CreateUser(c.Request.Context(), &user)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 
 	info, err := s.UserDao.FindUser(c.Request.Context(), user.Id)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	s.returnSuccess(c, info)
@@ -98,13 +107,16 @@ func (s *Service) DeleteUser(c *gin.Context) {
 		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
 		return
 	}
+
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
+
 	err = s.UserDao.DeleteUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	s.returnSuccess(c, "delete succ")
@@ -119,14 +131,16 @@ func (s *Service) ModifyUser(c *gin.Context) {
 		return
 	}
 	if err := validateReq(req); err != nil {
-		code := constant.ERROR_PARAM_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
 		return
 	}
 	uid := int(req.Id)
+
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
 
 	data := make(map[string]interface{})
 	json.Unmarshal(reqBody, &data)
@@ -160,20 +174,12 @@ func (s *Service) ModifyUser(c *gin.Context) {
 
 	err := s.UserDao.UpdateUser(c.Request.Context(), uid, modifyArr)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	info, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	s.returnSuccess(c, info)

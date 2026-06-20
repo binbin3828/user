@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 	"user/dao"
+	"user/pkg/config"
 	"user/pkg/dbconn"
 	"user/pkg/logger"
 	"user/service"
@@ -35,8 +36,18 @@ func main() {
 
 	go func() {
 		zapLog.Infof("server starting on :8080")
-		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
+
+		tlsEnabled, _ := config.Get("config.tls.enabled").(bool)
+		if tlsEnabled {
+			certFile, _ := config.Get("config.tls.certFile").(string)
+			keyFile, _ := config.Get("config.tls.keyFile").(string)
+			if err := server.ListenAndServeTLS(certFile, keyFile); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("server error: %v", err)
+			}
+		} else {
+			if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+				log.Fatalf("server error: %v", err)
+			}
 		}
 	}()
 

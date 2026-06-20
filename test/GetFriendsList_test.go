@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
+	"user/constant"
 	"user/model"
 
 	"github.com/gin-gonic/gin"
@@ -20,6 +21,7 @@ func TestGetFriendsList_Success(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetFriendsList(c)
 
@@ -48,7 +50,6 @@ func TestGetFriendsList_MissingUID(t *testing.T) {
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/", nil)
-	// no params, so c.Param("uid") returns ""
 
 	svc.GetFriendsList(c)
 
@@ -65,13 +66,18 @@ func TestGetFriendsList_UserNotFound(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/999", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "999"}}
+	authContextSet(c, 999)
 
 	svc.GetFriendsList(c)
 
 	var resp map[string]interface{}
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if int(resp["code"].(float64)) == 0 {
+	code := int(resp["code"].(float64))
+	if code == 0 {
 		t.Fatal("expected error, got success")
+	}
+	if code != constant.ERROR_MYSQL_ERR {
+		t.Errorf("expected code=%d, got %d", constant.ERROR_MYSQL_ERR, code)
 	}
 }
 
@@ -83,6 +89,7 @@ func TestGetFriendsList_EmptyList(t *testing.T) {
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/1", nil)
 	c.Params = gin.Params{{Key: "uid", Value: "1"}}
+	authContextSet(c, 1)
 
 	svc.GetFriendsList(c)
 

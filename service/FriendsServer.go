@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"strconv"
 	"user/constant"
-	"user/pkg/util"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,13 +20,15 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 		return
 	}
 
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
+
 	info, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	geohashStr := info.LocGeohash
@@ -48,11 +49,7 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 
 	list, err := s.FriendsDao.GetNearbyFriend(c.Request.Context(), uid, likeSubStr)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 
@@ -74,22 +71,20 @@ func (s *Service) GetFriendsList(c *gin.Context) {
 		return
 	}
 
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
+
 	_, err = s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	list, err := s.FriendsDao.GetFriendsList(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 	s.returnSuccess(c, gin.H{
@@ -107,44 +102,35 @@ func (s *Service) AddFriend(c *gin.Context) {
 		return
 	}
 	if err := validateReq(req); err != nil {
-		code := constant.ERROR_PARAM_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
 		return
 	}
 
 	uid := int(req.Uid)
+
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
+
 	friendID := int(req.Fri)
 
 	_, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, "invalid friend request")
 		return
 	}
 
 	_, err = s.UserDao.FindUser(c.Request.Context(), friendID)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, "invalid friend request")
 		return
 	}
 
 	err = s.FriendsDao.AddFriend(c.Request.Context(), uid, friendID)
 	if err != nil {
-		code := constant.ERROR_MYSQL_ERR
-		if ce, ok := err.(*util.CodeError); ok {
-			code = ce.Code
-		}
-		s.returnError(c, code, err.Error())
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
 

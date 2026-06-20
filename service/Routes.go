@@ -7,16 +7,24 @@ import (
 func NewRouter(s *Service) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(CORS())
 	r.Use(s.LoggerMiddleware())
+	r.Use(MaxBodySize())
 
-	r.GET("/user/:uid", s.GetUser)
-	r.POST("/user", s.CreateUser)
-	r.PUT("/user", s.ModifyUser)
-	r.DELETE("/user/:uid", s.DeleteUser)
+	r.POST("/auth/login", s.Login)
 
-	r.POST("/friends", s.AddFriend)
-	r.GET("/friends/:uid", s.GetFriendsList)
-	r.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
+	auth := r.Group("")
+	auth.Use(s.AuthRequired())
+	{
+		auth.GET("/user/:uid", s.GetUser)
+		auth.POST("/user", s.CreateUser)
+		auth.PUT("/user", s.ModifyUser)
+		auth.DELETE("/user/:uid", s.DeleteUser)
+
+		auth.POST("/friends", s.AddFriend)
+		auth.GET("/friends/:uid", s.GetFriendsList)
+		auth.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
+	}
 
 	return r
 }
