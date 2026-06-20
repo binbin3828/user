@@ -31,7 +31,20 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 		return
 	}
 	geohashStr := info.LocGeohash
-	likeSubStr := geohashStr[0:6]
+
+	precision := 6
+	if p := c.Query("precision"); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 12 {
+			s.returnError(c, constant.ERROR_PARAM_ERR, "param precision must be 1-12")
+			return
+		}
+		precision = n
+	}
+	if len(geohashStr) < precision {
+		precision = len(geohashStr)
+	}
+	likeSubStr := geohashStr[:precision]
 
 	list, err := s.FriendsDao.GetNearbyFriend(c.Request.Context(), uid, likeSubStr)
 	if err != nil {
