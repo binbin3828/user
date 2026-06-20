@@ -5,11 +5,11 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"user/constant"
 	"user/pkg/config"
+	"user/pkg/ratelimit"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -53,6 +53,7 @@ func (s *Service) AuthRequired() gin.HandlerFunc {
 		}
 		c.Set("user_id", claims.UserID)
 		c.Set("role", claims.Role)
+		heartbeatUser(claims.UserID)
 		c.Next()
 	}
 }
@@ -127,62 +128,7 @@ func SecurityHeaders() gin.HandlerFunc {
 	}
 }
 
-type RateLimiter struct {
-	mu       sync.Mutex
-	visitors map[string]*visitor
-	rate     int
-	window   time.Duration
-}
-
-type visitor struct {
-	count    int
-	lastSeen time.Time
-}
-
-func NewRateLimiter(rate int, window time.Duration) *RateLimiter {
-	rl := &RateLimiter{
-		visitors: make(map[string]*visitor),
-		rate:     rate,
-		window:   window,
-	}
-	go func() {
-		ticker := time.NewTicker(window)
-		defer ticker.Stop()
-		for range ticker.C {
-			rl.mu.Lock()
-			for ip, v := range rl.visitors {
-				if time.Since(v.lastSeen) > window {
-					delete(rl.visitors, ip)
-				}
-			}
-			rl.mu.Unlock()
-		}
-	}()
-	return rl
-}
-
-func (rl *RateLimiter) Allow(ip string) bool {
-	rl.mu.Lock()
-	defer rl.mu.Unlock()
-
-	v, ok := rl.visitors[ip]
-	if !ok {
-		rl.visitors[ip] = &visitor{count: 1, lastSeen: time.Now()}
-		return true
-	}
-
-	if time.Since(v.lastSeen) > rl.window {
-		v.count = 1
-		v.lastSeen = time.Now()
-		return true
-	}
-
-	v.lastSeen = time.Now()
-	v.count++
-	return v.count <= rl.rate
-}
-
-func RateLimitMiddleware(rl *RateLimiter) gin.HandlerFunc {
+func RateLimitMiddleware(rl ratelimit.Limiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		ip := c.ClientIP()
 		if !rl.Allow(ip) {

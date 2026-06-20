@@ -26,6 +26,20 @@ var (
 		},
 	)
 
+	friendRequestsSent = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "friend_requests_sent_total",
+			Help: "Total number of friend requests sent",
+		},
+	)
+
+	friendRequestsAccepted = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "friend_requests_accepted_total",
+			Help: "Total number of friend requests accepted",
+		},
+	)
+
 	friendAdditions = prometheus.NewCounter(
 		prometheus.CounterOpts{
 			Name: "friend_additions_total",
@@ -59,7 +73,7 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(reqCnt, reqDur, reqInFlight, loginAttempts, userCreations, friendAdditions)
+	prometheus.MustRegister(reqCnt, reqDur, reqInFlight, loginAttempts, userCreations, friendAdditions, friendRequestsSent, friendRequestsAccepted)
 	prometheus.Register(collectors.NewGoCollector())
 }
 

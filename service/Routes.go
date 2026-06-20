@@ -26,8 +26,6 @@ func NewRouter(s *Service) *gin.Engine {
 	r.Use(RequestTimeout(30 * time.Second))
 	r.Use(s.AuditLog())
 
-	loginLimiter := NewRateLimiter(10, time.Minute)
-
 	r.GET("/healthz", s.Healthz)
 	r.GET("/readyz", s.Readyz)
 	r.GET("/metrics", MetricsHandler())
@@ -36,7 +34,9 @@ func NewRouter(s *Service) *gin.Engine {
 
 	v1 := r.Group("/v1")
 	{
-		v1.POST("/auth/login", RateLimitMiddleware(loginLimiter), s.Login)
+		v1.POST("/auth/login", RateLimitMiddleware(s.RateLimiter), s.Login)
+		v1.POST("/auth/forgot-password", s.ForgotPassword)
+		v1.POST("/auth/reset-password", s.ResetPassword)
 
 		auth := v1.Group("")
 		auth.Use(s.AuthRequired())
@@ -49,6 +49,19 @@ func NewRouter(s *Service) *gin.Engine {
 			auth.POST("/friends", s.AddFriend)
 			auth.GET("/friends/:uid", s.GetFriendsList)
 			auth.GET("/nearbyfriends/:uid", s.GetNearbyFriend)
+			auth.GET("/nearby-users/:uid", s.GetNearbyStranger)
+
+			auth.POST("/friend-requests", s.SendFriendRequest)
+			auth.GET("/friend-requests/incoming", s.GetIncomingFriendRequests)
+			auth.GET("/friend-requests/outgoing", s.GetOutgoingFriendRequests)
+			auth.PUT("/friend-requests/:id/accept", s.AcceptFriendRequest)
+			auth.PUT("/friend-requests/:id/reject", s.RejectFriendRequest)
+
+			auth.POST("/blacklist", s.BlockUser)
+			auth.DELETE("/blacklist/:uid", s.UnblockUser)
+			auth.GET("/blacklist", s.GetBlockedList)
+
+			auth.GET("/users/online", s.GetUsersOnline)
 		}
 	}
 

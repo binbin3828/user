@@ -52,6 +52,25 @@ func (s *Service) GetUser(c *gin.Context) {
 		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "user not found")
 		return
 	}
+
+	callerID := s.currentUserID(c)
+	if callerID != 0 {
+		blocked, err := s.BlacklistDao.IsBlocked(c.Request.Context(), uid, callerID)
+		if err != nil {
+			s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
+			return
+		}
+		if blocked {
+			s.returnError(c, constant.ERROR_BLOCKED, "you have been blocked by this user")
+			return
+		}
+	}
+
+	userInfo.Password = ""
+	if online := IsUserOnline(userInfo.Id); online {
+		c.Writer.Header().Set("X-User-Online", "true")
+	}
+
 	s.returnSuccess(c, userInfo)
 }
 

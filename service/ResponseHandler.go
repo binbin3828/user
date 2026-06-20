@@ -3,6 +3,7 @@ package service
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,6 +13,32 @@ import (
 
 	"user/constant"
 )
+
+var sensitiveFields = map[string]bool{
+	"password":         true,
+	"old_password":     true,
+	"new_password":     true,
+	"confirm_password": true,
+	"token":            true,
+	"secret":           true,
+}
+
+func sanitizeBody(raw []byte) string {
+	if len(raw) == 0 {
+		return ""
+	}
+	var body map[string]interface{}
+	if err := json.Unmarshal(raw, &body); err != nil {
+		return "[non-json body]"
+	}
+	for key := range body {
+		if sensitiveFields[key] {
+			body[key] = "***"
+		}
+	}
+	sanitized, _ := json.Marshal(body)
+	return string(sanitized)
+}
 
 func logWithTrace(s *Service, ctx context.Context, format string, args ...interface{}) {
 	traceID := traceIDFromContext(ctx)
@@ -30,7 +57,7 @@ func (s *Service) LoggerMiddleware() gin.HandlerFunc {
 
 		if c.Request.Body != nil {
 			body, _ := c.GetRawData()
-			logWithTrace(s, ctx, "[%s] request body: %s", reqID, body)
+			logWithTrace(s, ctx, "[%s] request body: %s", reqID, sanitizeBody(body))
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
 
@@ -48,6 +75,10 @@ func httpStatusFromCode(code int) int {
 		return http.StatusUnauthorized
 	case constant.ERROR_PERMISSION_DENIED:
 		return http.StatusForbidden
+	case constant.ERROR_REQUEST_NOT_FOUND:
+		return http.StatusNotFound
+	case constant.ERROR_ALREADY_FRIENDS, constant.ERROR_FRIEND_REQUEST_EXISTS, constant.ERROR_REQUEST_NOT_PENDING, constant.ERROR_BLOCKED:
+		return http.StatusConflict
 	default:
 		return http.StatusInternalServerError
 	}

@@ -98,6 +98,95 @@ func (s *Service) GetNearbyFriend(c *gin.Context) {
 	s.returnPaginated(c, list, total, page, pageSize)
 }
 
+func (s *Service) GetNearbyStranger(c *gin.Context) {
+	uidStr := c.Param("uid")
+	if uidStr == "" {
+		s.returnError(c, constant.ERROR_PARAM_ERR, "param uid not set")
+		return
+	}
+	uid, err := strconv.Atoi(uidStr)
+	if err != nil {
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
+	}
+
+	callerID := s.currentUserID(c)
+	if callerID != uid {
+		s.returnError(c, constant.ERROR_PERMISSION_DENIED, "permission denied")
+		return
+	}
+
+	info, err := s.UserDao.FindUser(c.Request.Context(), uid)
+	if err != nil {
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
+		return
+	}
+	geohashStr := info.LocGeohash
+
+	if geohashStr == "" {
+		s.returnSuccess(c, []interface{}{})
+		return
+	}
+
+	precision := 6
+	if p := c.Query("precision"); p != "" {
+		n, err := strconv.Atoi(p)
+		if err != nil || n < 1 || n > 12 {
+			s.returnError(c, constant.ERROR_PARAM_ERR, "param precision must be 1-12")
+			return
+		}
+		precision = n
+	}
+	if len(geohashStr) < precision {
+		precision = len(geohashStr)
+	}
+	likeSubStr := geohashStr[:precision]
+
+	page, pageSize := parsePagination(c)
+	offset := (page - 1) * pageSize
+
+	total, err := s.FriendsDao.CountNearbyStrangers(c.Request.Context(), uid, likeSubStr)
+	if err != nil {
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
+		return
+	}
+
+	list, err := s.FriendsDao.GetNearbyStrangers(c.Request.Context(), uid, likeSubStr, pageSize, offset)
+	if err != nil {
+		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
+		return
+	}
+
+	s.returnPaginated(c, list, total, page, pageSize)
+}
+
+func (s *Service) GetUsersOnline(c *gin.Context) {
+	uidsStr := c.QueryArray("uids[]")
+	if uidsStr == nil {
+		uidsStr = c.QueryArray("uids")
+	}
+	var uids []int
+	for _, uidStr := range uidsStr {
+		uid, err := strconv.Atoi(uidStr)
+		if err != nil {
+			s.returnError(c, constant.ERROR_PARAM_ERR, "invalid uid: "+uidStr)
+			return
+		}
+		uids = append(uids, uid)
+	}
+
+	statusMap := BatchIsOnline(uids)
+	result := make([]gin.H, 0, len(uids))
+	for _, uid := range uids {
+		result = append(result, gin.H{
+			"uid":       uid,
+			"is_online": statusMap[uid],
+		})
+	}
+
+	s.returnSuccess(c, result)
+}
+
 // @Summary      Get friends list
 // @Description  Returns paginated list of friends for the given user
 // @Tags         Friends

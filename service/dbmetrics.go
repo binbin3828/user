@@ -9,13 +9,13 @@ import (
 type dbStatsCollector struct {
 	db *sql.DB
 
-	maxOpenDesc      *prometheus.Desc
-	openDesc         *prometheus.Desc
-	inUseDesc        *prometheus.Desc
-	idleDesc         *prometheus.Desc
-	waitCountDesc    *prometheus.Desc
-	waitDurDesc      *prometheus.Desc
-	maxIdleClosed    *prometheus.Desc
+	maxOpenDesc       *prometheus.Desc
+	openDesc          *prometheus.Desc
+	inUseDesc         *prometheus.Desc
+	idleDesc          *prometheus.Desc
+	waitCountDesc     *prometheus.Desc
+	waitDurDesc       *prometheus.Desc
+	maxIdleClosed     *prometheus.Desc
 	maxLifetimeClosed *prometheus.Desc
 }
 

@@ -13,11 +13,21 @@ var validate = validator.New()
 type createUserReq struct {
 	Name        string  `json:"name"     validate:"required"`
 	Password    string  `json:"password" validate:"required,min=8"`
+	Email       string  `json:"email"`
 	Dob         string  `json:"dob"`
 	Address     string  `json:"address"`
 	Description string  `json:"description"`
 	Latitude    float64 `json:"latitude"`
 	Longitude   float64 `json:"longitude"`
+}
+
+type forgotPasswordReq struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+type resetPasswordReq struct {
+	Token       string `json:"token"        validate:"required"`
+	NewPassword string `json:"new_password" validate:"required,min=8"`
 }
 
 type modifyUserReq struct {
@@ -27,6 +37,10 @@ type modifyUserReq struct {
 type addFriendReq struct {
 	Uid float64 `json:"uid" validate:"required"`
 	Fri float64 `json:"fri" validate:"required"`
+}
+
+type sendFriendRequestReq struct {
+	ToUID int `json:"to_uid" validate:"required"`
 }
 
 func validateReq(req interface{}) error {

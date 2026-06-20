@@ -31,10 +31,47 @@ import (
 	"user/pkg/config"
 	"user/pkg/dbconn"
 	"user/pkg/logger"
+	"user/pkg/mailer"
+	"user/pkg/ratelimit"
+	"user/pkg/redis"
 	"user/service"
 )
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "migrate" {
+		runMigrate()
+		return
+	}
+	runServer()
+}
+
+func runMigrate() {
+	zapLog := logger.NewZapLogger()
+
+	db, err := dbconn.NewMysql(zapLog)
+	if err != nil {
+		log.Fatalf("mysql init failed: %v", err)
+	}
+
+	if err := db.AutoMigrate(
+		&model.User{},
+		&model.Friends{},
+		&model.FriendRequest{},
+		&model.Blacklist{},
+		&model.PasswordResetToken{},
+	); err != nil {
+		log.Fatalf("auto migrate failed: %v", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.Close()
+	}
+	zapLog.Sync()
+	zapLog.Infof("migration completed successfully")
+}
+
+func runServer() {
 	zapLog := logger.NewZapLogger()
 
 	tp, err := service.InitTracerProvider("user-service")
@@ -58,14 +95,26 @@ func main() {
 	}
 	service.RegisterDBMetrics(sqlDB)
 
-	if err := db.AutoMigrate(&model.User{}, &model.Friends{}); err != nil {
-		log.Fatalf("auto migrate failed: %v", err)
-	}
-
 	userDao := dao.NewUserDao(db, zapLog)
 	friendsDao := dao.NewFriendsDao(db, zapLog)
+	friendRequestDao := dao.NewFriendRequestDao(db, zapLog)
+	blacklistDao := dao.NewBlacklistDao(db, zapLog)
+	passwordResetDao := dao.NewPasswordResetDao(db, zapLog)
+	mailerInst := &mailer.DevMailer{}
 
-	svc := service.NewService(zapLog, userDao, friendsDao)
+	var rl ratelimit.Limiter
+	if err := redis.Init(); err != nil {
+		zapLog.Warnf("redis init failed, using memory limiter: %v", err)
+		rl = ratelimit.NewMemoryLimiter(10, time.Minute)
+	} else if redis.Enabled() {
+		rl = ratelimit.NewRedisLimiterFromClient(redis.Client(), 10, time.Minute)
+		zapLog.Infof("rate limiter: redis")
+	} else {
+		rl = ratelimit.NewMemoryLimiter(10, time.Minute)
+		zapLog.Infof("rate limiter: memory (not suitable for multi-instance)")
+	}
+
+	svc := service.NewService(zapLog, userDao, friendsDao, friendRequestDao, blacklistDao, passwordResetDao, mailerInst, rl)
 	router := service.NewRouter(svc)
 
 	tlsEnabled, _ := config.Get("config.tls.enabled").(bool)
