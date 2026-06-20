@@ -12,7 +12,7 @@ import (
 )
 
 func TestLogin_Success(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	hash, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.DefaultCost)
 	userDao.Users[1] = &model.User{Id: 1, Name: "testuser", Password: string(hash)}
 
@@ -39,7 +39,7 @@ func TestLogin_Success(t *testing.T) {
 }
 
 func TestLogin_WrongPassword(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	hash, _ := bcrypt.GenerateFromPassword([]byte("testpass"), bcrypt.DefaultCost)
 	userDao.Users[1] = &model.User{Id: 1, Name: "testuser", Password: string(hash)}
 
@@ -62,7 +62,7 @@ func TestLogin_WrongPassword(t *testing.T) {
 }
 
 func TestLogin_UserNotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	body := `{"name":"nonexistent","password":"testpass"}`
 	w := httptest.NewRecorder()
@@ -83,7 +83,7 @@ func TestLogin_UserNotFound(t *testing.T) {
 }
 
 func TestLogin_MissingName(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	body := `{"password":"testpass"}`
 	w := httptest.NewRecorder()
@@ -101,7 +101,7 @@ func TestLogin_MissingName(t *testing.T) {
 }
 
 func TestLogin_MissingPassword(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	body := `{"name":"testuser"}`
 	w := httptest.NewRecorder()

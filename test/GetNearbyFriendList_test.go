@@ -11,7 +11,7 @@ import (
 )
 
 func TestGetNearbyFriend_Success(t *testing.T) {
-	svc, userDao, friendsDao := newTestService()
+	svc, userDao, friendsDao, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0" + "xxxxx"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob", LocGeohash: "wx4g0" + "yyyyy"}
 	friendsDao.AddFriend(context.Background(), 1, 2)
@@ -45,7 +45,7 @@ func TestGetNearbyFriend_Success(t *testing.T) {
 }
 
 func TestGetNearbyFriend_MissingUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/", nil)
@@ -60,7 +60,7 @@ func TestGetNearbyFriend_MissingUID(t *testing.T) {
 }
 
 func TestGetNearbyFriend_UserNotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/nearbyfriends/999", nil)
@@ -77,7 +77,7 @@ func TestGetNearbyFriend_UserNotFound(t *testing.T) {
 }
 
 func TestGetNearbyFriend_EmptyList(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0xxxxx"}
 
 	w := httptest.NewRecorder()
@@ -105,7 +105,7 @@ func TestGetNearbyFriend_EmptyList(t *testing.T) {
 }
 
 func TestGetNearbyFriend_WithPrecision(t *testing.T) {
-	svc, userDao, friendsDao := newTestService()
+	svc, userDao, friendsDao, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0xxxxx"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob", LocGeohash: "wx4g0yyyyy"}
 	friendsDao.AddFriend(context.Background(), 1, 2)
@@ -135,7 +135,7 @@ func TestGetNearbyFriend_WithPrecision(t *testing.T) {
 }
 
 func TestGetNearbyFriend_InvalidPrecision(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice", LocGeohash: "wx4g0xxxxx"}
 
 	w := httptest.NewRecorder()

@@ -10,7 +10,7 @@ import (
 )
 
 func TestDeleteUser_Success(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby"}
 
 	w := httptest.NewRecorder()
@@ -36,7 +36,7 @@ func TestDeleteUser_Success(t *testing.T) {
 }
 
 func TestDeleteUser_InvalidUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("DELETE", "/user/abc", nil)
@@ -52,7 +52,7 @@ func TestDeleteUser_InvalidUID(t *testing.T) {
 }
 
 func TestDeleteUser_NotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("DELETE", "/user/999", nil)

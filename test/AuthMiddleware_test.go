@@ -34,7 +34,7 @@ func testToken(userID int) string {
 }
 
 func TestAuthRequired_MissingHeader(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -55,7 +55,7 @@ func TestAuthRequired_MissingHeader(t *testing.T) {
 }
 
 func TestAuthRequired_InvalidToken(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -77,7 +77,7 @@ func TestAuthRequired_InvalidToken(t *testing.T) {
 }
 
 func TestAuthRequired_InvalidScheme(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -99,7 +99,7 @@ func TestAuthRequired_InvalidScheme(t *testing.T) {
 }
 
 func TestAuthRequired_EmptyBearerToken(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -118,7 +118,7 @@ func TestAuthRequired_EmptyBearerToken(t *testing.T) {
 }
 
 func TestAuthRequired_SetsUserIDAndRole(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	token := testToken(42)
 
 	w := httptest.NewRecorder()

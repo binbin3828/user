@@ -17,10 +17,10 @@ func TestSecurityHeaders_SetsAll(t *testing.T) {
 	service.SecurityHeaders()(c)
 
 	headers := map[string]string{
-		"X-Content-Type-Options": "nosniff",
-		"X-Frame-Options":        "DENY",
-		"X-XSS-Protection":       "1; mode=block",
-		"Referrer-Policy":        "no-referrer",
+		"X-Content-Type-Options":  "nosniff",
+		"X-Frame-Options":         "DENY",
+		"X-XSS-Protection":        "1; mode=block",
+		"Referrer-Policy":         "no-referrer",
 		"Content-Security-Policy": "default-src 'none'",
 	}
 

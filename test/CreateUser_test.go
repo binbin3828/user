@@ -1,17 +1,17 @@
 package test
 
 import (
-	"errors"
-	"strings"
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
 )
 
 func TestCreateUser_Success(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	body := `{"name":"bobby","password":"testpass123","dob":"1990-01-01","address":"shenzhen","description":"coder"}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -40,7 +40,7 @@ func TestCreateUser_Success(t *testing.T) {
 }
 
 func TestCreateUser_MissingName(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"dob":"1990-01-01"}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -56,7 +56,7 @@ func TestCreateUser_MissingName(t *testing.T) {
 }
 
 func TestCreateUser_WithLocation(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"name":"bobby","password":"testpass123","latitude":39.910934,"longitude":116.413385}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -81,7 +81,7 @@ func TestCreateUser_WithLocation(t *testing.T) {
 }
 
 func TestCreateUser_NegativeLocation(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"name":"bobby","password":"testpass123","latitude":-10,"longitude":116.413385}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -103,7 +103,7 @@ func TestCreateUser_NegativeLocation(t *testing.T) {
 }
 
 func TestCreateUser_DAOCreateError(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.CreateUserErr = errors.New("db error")
 	body := `{"name":"bobby","password":"testpass123"}`
 	w := httptest.NewRecorder()

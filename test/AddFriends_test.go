@@ -1,10 +1,10 @@
 package test
 
 import (
-	"errors"
-	"strings"
 	"encoding/json"
+	"errors"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"user/model"
 
@@ -12,7 +12,7 @@ import (
 )
 
 func TestAddFriend_Success(t *testing.T) {
-	svc, userDao, friendsDao := newTestService()
+	svc, userDao, friendsDao, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
 
@@ -49,7 +49,7 @@ func TestAddFriend_Success(t *testing.T) {
 }
 
 func TestAddFriend_MissingUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"fri":2}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -65,7 +65,7 @@ func TestAddFriend_MissingUID(t *testing.T) {
 }
 
 func TestAddFriend_MissingFri(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	body := `{"uid":1}`
@@ -83,7 +83,7 @@ func TestAddFriend_MissingFri(t *testing.T) {
 }
 
 func TestAddFriend_UserNotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"uid":999,"fri":2}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -104,7 +104,7 @@ func TestAddFriend_UserNotFound(t *testing.T) {
 }
 
 func TestAddFriend_FriendNotFound(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	body := `{"uid":1,"fri":999}`
@@ -126,7 +126,7 @@ func TestAddFriend_FriendNotFound(t *testing.T) {
 }
 
 func TestAddFriend_DAOAddError(t *testing.T) {
-	svc, userDao, friendsDao := newTestService()
+	svc, userDao, friendsDao, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
 	friendsDao.AddFriendErr = errors.New("db error")

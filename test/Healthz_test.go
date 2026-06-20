@@ -9,7 +9,7 @@ import (
 )
 
 func TestHealthz_ReturnsOk(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -28,7 +28,7 @@ func TestHealthz_ReturnsOk(t *testing.T) {
 }
 
 func TestReadyz_Ready(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[0] = nil
 
 	w := httptest.NewRecorder()

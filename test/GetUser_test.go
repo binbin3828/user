@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"testing"
-	"user/model"
 	"user/constant"
+	"user/model"
+	"user/pkg/mailer"
+	"user/pkg/ratelimit"
 	"user/service"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,16 +18,21 @@ func init() {
 	gin.SetMode(gin.TestMode)
 }
 
-func newTestService() (*service.Service, *MockUserDao, *MockFriendsDao) {
+func newTestService() (*service.Service, *MockUserDao, *MockFriendsDao, *MockFriendRequestDao, *MockBlacklistDao, *MockPasswordResetDao) {
 	log := &MockLogger{}
 	userDao := NewMockUserDao()
 	friendsDao := NewMockFriendsDao()
-	svc := service.NewService(log, userDao, friendsDao)
-	return svc, userDao, friendsDao
+	friendReqDao := NewMockFriendRequestDao()
+	blacklistDao := NewMockBlacklistDao()
+	passwordResetDao := NewMockPasswordResetDao()
+	mailerInst := &mailer.DevMailer{}
+	rl := ratelimit.NewMemoryLimiter(10, time.Minute)
+	svc := service.NewService(log, userDao, friendsDao, friendReqDao, blacklistDao, passwordResetDao, mailerInst, rl)
+	return svc, userDao, friendsDao, friendReqDao, blacklistDao, passwordResetDao
 }
 
 func TestGetUser_Success(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby", Address: "shenzhen"}
 
 	w := httptest.NewRecorder()
@@ -48,7 +56,7 @@ func TestGetUser_Success(t *testing.T) {
 }
 
 func TestGetUser_MissingUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/user/", nil)
@@ -63,7 +71,7 @@ func TestGetUser_MissingUID(t *testing.T) {
 }
 
 func TestGetUser_InvalidUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/user/abc", nil)
@@ -79,7 +87,7 @@ func TestGetUser_InvalidUID(t *testing.T) {
 }
 
 func TestGetUser_NotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/user/999", nil)

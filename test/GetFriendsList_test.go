@@ -12,7 +12,7 @@ import (
 )
 
 func TestGetFriendsList_Success(t *testing.T) {
-	svc, userDao, friendsDao := newTestService()
+	svc, userDao, friendsDao, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
 	friendsDao.AddFriend(context.Background(), 1, 2)
@@ -52,7 +52,7 @@ func TestGetFriendsList_Success(t *testing.T) {
 }
 
 func TestGetFriendsList_MissingUID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/", nil)
@@ -67,7 +67,7 @@ func TestGetFriendsList_MissingUID(t *testing.T) {
 }
 
 func TestGetFriendsList_UserNotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
 	c.Request = httptest.NewRequest("GET", "/friends/999", nil)
@@ -88,7 +88,7 @@ func TestGetFriendsList_UserNotFound(t *testing.T) {
 }
 
 func TestGetFriendsList_EmptyList(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	w := httptest.NewRecorder()

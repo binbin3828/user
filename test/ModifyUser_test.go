@@ -1,9 +1,9 @@
 package test
 
 import (
-	"strings"
 	"encoding/json"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"user/model"
 
@@ -11,7 +11,7 @@ import (
 )
 
 func TestModifyUser_Success(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "old", Address: "beijing"}
 
 	body := `{"id":1,"name":"new_name","address":"shanghai"}`
@@ -35,7 +35,7 @@ func TestModifyUser_Success(t *testing.T) {
 }
 
 func TestModifyUser_MissingID(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"name":"bobby"}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
@@ -51,7 +51,7 @@ func TestModifyUser_MissingID(t *testing.T) {
 }
 
 func TestModifyUser_WithLocation(t *testing.T) {
-	svc, userDao, _ := newTestService()
+	svc, userDao, _, _, _, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby"}
 
 	body := `{"id":1,"latitude":39.91,"longitude":116.41}`
@@ -78,7 +78,7 @@ func TestModifyUser_WithLocation(t *testing.T) {
 }
 
 func TestModifyUser_NotFound(t *testing.T) {
-	svc, _, _ := newTestService()
+	svc, _, _, _, _, _ := newTestService()
 	body := `{"id":999,"name":"test"}`
 	w := httptest.NewRecorder()
 	c, _ := gin.CreateTestContext(w)
