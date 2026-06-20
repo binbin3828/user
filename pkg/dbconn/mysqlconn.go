@@ -3,7 +3,7 @@ package dbconn
 import (
 	"fmt"
 	"os"
-	"strings"
+	"regexp"
 	"time"
 	"user/pkg/config"
 	"user/pkg/logger"
@@ -12,6 +12,24 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/schema"
 )
+
+var envPlaceholderRe = regexp.MustCompile(`\$\{(\w+)(?::([^}]*))?\}`)
+
+func substituteEnvVars(dsn string) string {
+	if envDSN := os.Getenv("MYSQL_DSN"); envDSN != "" {
+		return envDSN
+	}
+	result := envPlaceholderRe.ReplaceAllStringFunc(dsn, func(match string) string {
+		submatch := envPlaceholderRe.FindStringSubmatch(match)
+		varName := submatch[1]
+		defaultVal := submatch[2]
+		if val := os.Getenv(varName); val != "" {
+			return val
+		}
+		return defaultVal
+	})
+	return result
+}
 
 type MysqlConf struct {
 	DriveName      string
@@ -25,11 +43,7 @@ func NewMysql(log logger.Logger) (*gorm.DB, error) {
 	var mysqlConf MysqlConf
 	mysqlConf.DriveName = config.Get("config.mysql.driveName").(string)
 	dsn := config.Get("config.mysql.dataSourceName").(string)
-	if envDSN := os.Getenv("MYSQL_DSN"); envDSN != "" {
-		dsn = envDSN
-	} else if pwd := os.Getenv("DB_PASSWORD"); pwd != "" {
-		dsn = strings.ReplaceAll(dsn, "${DB_PASSWORD}", pwd)
-	}
+	dsn = substituteEnvVars(dsn)
 	mysqlConf.DataSourceName = dsn
 	mysqlConf.MaxIdle = config.Get("config.mysql.maxIdle").(int)
 	mysqlConf.MaxOpen = config.Get("config.mysql.maxOpen").(int)

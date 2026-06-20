@@ -1,6 +1,6 @@
 mysql:
   driveName: mysql
-  dataSourceName: xgame:${DB_PASSWORD}@tcp(121.196.204.236:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+  dataSourceName: ${MYSQL_USER:root}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306})/${MYSQL_DATABASE:bobby_test}?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
   maxIdle: 25
   maxOpen: 50
   maxLifetime: 1
@@ -15,3 +15,7 @@ tls:
   enabled: true
   certFile: "cert.pem"
   keyFile: "key.pem"
+
+redis:
+  addr: ""
+  password: ""

@@ -19,6 +19,7 @@ type IUserDao interface {
 	CreateUser(ctx context.Context, user *model.User) error
 	FindUser(ctx context.Context, id int) (*model.User, error)
 	FindUserByName(ctx context.Context, name string) (*model.User, error)
+	FindUserByEmail(ctx context.Context, email string) (*model.User, error)
 	DeleteUser(ctx context.Context, uid int) error
 	UpdateUser(ctx context.Context, uid int, modifyArr map[string]interface{}) error
 }
@@ -60,6 +61,18 @@ func (T *UserDao) FindUserByName(ctx context.Context, name string) (*model.User,
 
 	var user model.User
 	err := T.db.WithContext(ctx).Table("user").Where("name=?", name).First(&user).Error
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
+func (T *UserDao) FindUserByEmail(ctx context.Context, email string) (*model.User, error) {
+	ctx, span := daoUserTracer.Start(ctx, "UserDao.FindUserByEmail", trace.WithAttributes(attribute.String("user.email", email)))
+	defer span.End()
+
+	var user model.User
+	err := T.db.WithContext(ctx).Table("user").Where("email = ?", email).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

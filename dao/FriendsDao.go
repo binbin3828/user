@@ -21,6 +21,8 @@ type IFriendsDao interface {
 	CountFriendsList(ctx context.Context, uid int) (int64, error)
 	GetNearbyFriend(ctx context.Context, uid int, subStr string, limit, offset int) ([]*model.RetNearbyFriendsList, error)
 	CountNearbyFriend(ctx context.Context, uid int, subStr string) (int64, error)
+	GetNearbyStrangers(ctx context.Context, uid int, subStr string, limit, offset int) ([]*model.RetNearbyFriendsList, error)
+	CountNearbyStrangers(ctx context.Context, uid int, subStr string) (int64, error)
 }
 
 var _ IFriendsDao = (*FriendsDao)(nil)
@@ -60,6 +62,59 @@ func (T *FriendsDao) CountNearbyFriend(ctx context.Context, uid int, subStr stri
 	var total int64
 	subStr = subStr + "%"
 	err := T.db.WithContext(ctx).Raw("select COUNT(*) from friends,user where friends.uid = ? AND friends.fri = user.id AND user.loc_geohash LIKE ?", uid, subStr).Scan(&total).Error
+	if err != nil {
+		return 0, err
+	}
+	return total, nil
+}
+
+func (T *FriendsDao) GetNearbyStrangers(ctx context.Context, uid int, subStr string, limit, offset int) ([]*model.RetNearbyFriendsList, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.GetNearbyStrangers",
+		trace.WithAttributes(
+			attribute.Int("uid", uid),
+			attribute.String("geohash_prefix", subStr),
+		),
+	)
+	defer span.End()
+
+	var list []*model.RetNearbyFriendsList
+	subStr = subStr + "%"
+	sql := `SELECT u.id AS fri_uid, u.name AS fri_name, u.latitude, u.longitude, u.loc_geohash
+		FROM user u
+		WHERE u.loc_geohash LIKE ?
+		  AND u.id != ?
+		  AND u.id NOT IN (SELECT fri FROM friends WHERE uid = ?)
+		  AND u.id NOT IN (SELECT from_uid FROM friend_requests WHERE to_uid = ? AND status = 'pending')
+		  AND u.id NOT IN (SELECT to_uid FROM friend_requests WHERE from_uid = ? AND status = 'pending')
+		  AND u.id NOT IN (SELECT blocked_uid FROM blacklist WHERE uid = ?)
+		LIMIT ? OFFSET ?`
+	err := T.db.WithContext(ctx).Raw(sql, subStr, uid, uid, uid, uid, uid, limit, offset).Scan(&list).Error
+	if err != nil {
+		return list, err
+	}
+	return list, nil
+}
+
+func (T *FriendsDao) CountNearbyStrangers(ctx context.Context, uid int, subStr string) (int64, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.CountNearbyStrangers",
+		trace.WithAttributes(
+			attribute.Int("uid", uid),
+			attribute.String("geohash_prefix", subStr),
+		),
+	)
+	defer span.End()
+
+	var total int64
+	subStr = subStr + "%"
+	sql := `SELECT COUNT(*)
+		FROM user u
+		WHERE u.loc_geohash LIKE ?
+		  AND u.id != ?
+		  AND u.id NOT IN (SELECT fri FROM friends WHERE uid = ?)
+		  AND u.id NOT IN (SELECT from_uid FROM friend_requests WHERE to_uid = ? AND status = 'pending')
+		  AND u.id NOT IN (SELECT to_uid FROM friend_requests WHERE from_uid = ? AND status = 'pending')
+		  AND u.id NOT IN (SELECT blocked_uid FROM blacklist WHERE uid = ?)`
+	err := T.db.WithContext(ctx).Raw(sql, subStr, uid, uid, uid, uid, uid).Scan(&total).Error
 	if err != nil {
 		return 0, err
 	}
