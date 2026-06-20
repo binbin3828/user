@@ -173,7 +173,7 @@ docker-compose down
 ```yaml
 mysql:
   driveName: mysql
-  dataSourceName: xgame:${DB_PASSWORD}@tcp(127.0.0.1:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+  dataSourceName: ${MYSQL_USER:root}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306})/${MYSQL_DATABASE:bobby_test}?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
   maxIdle: 25
   maxOpen: 50
   maxLifetime: 1
@@ -194,12 +194,20 @@ tls:
 
 | 环境变量 | 说明 | 示例 |
 |----------|------|------|
-| `DB_PASSWORD` | 替换 DSN 中的 `${DB_PASSWORD}` 占位符 | `mysecret` |
-| `MYSQL_DSN` | 完整覆盖 DSN（优先级高于 DB_PASSWORD） | `user:pass@tcp(...)` |
-| `JWT_SECRET` | JWT 签名密钥 | `openssl rand -base64 32` |
-| `LOG_LEVEL` | 日志级别：debug / info / warn / error | `debug` |
+| `MYSQL_DSN` | 完整 DSN（优先级最高，覆盖其他 MySQL 变量） | `user:pass@tcp(host:3306)/db?...` |
+| `MYSQL_HOST` | 数据库地址（默认 127.0.0.1） | `mysql.example.com` |
+| `MYSQL_PORT` | 数据库端口（默认 3306） | `3306` |
+| `MYSQL_USER` | 数据库用户名（默认 root） | `xgame` |
+| `MYSQL_PASSWORD` | 数据库密码（**生产必设**） | `mysecret` |
+| `MYSQL_DATABASE` | 数据库名（默认 bobby_test） | `bobby_test` |
+| `JWT_SECRET` | JWT 签名密钥（**生产必设**） | `openssl rand -base64 32` |
+| `LOG_LEVEL` | 日志级别：debug / info / warn / error | `info` |
+| `REDIS_ADDR` | Redis 地址（设了则启用 Redis 分布式限流） | `redis:6379` |
+| `REDIS_PASSWORD` | Redis 密码（可选） | `""` |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP 导出地址（为空则输出到 stdout） | `localhost:4317` |
 | `OTEL_TRACE_SAMPLE_RATE` | 采样率 0.0-1.0（默认 0.1） | `0.5` |
+
+> Redis 未配置时使用内存级限流（单实例可用），配置后自动切换为 Redis 分布式限流（多实例共享计数）。
 
 ---
 
@@ -219,13 +227,25 @@ tls:
 | 方法 | 路径 | 认证 | 限流 | 说明 |
 |------|------|------|------|------|
 | POST | `/v1/auth/login` | 否 | 是（10次/分钟/IP） | 登录获取 JWT |
+| POST | `/v1/auth/forgot-password` | 否 | 否 | 忘记密码，发送重置令牌 |
+| POST | `/v1/auth/reset-password` | 否 | 否 | 凭令牌重置密码 |
 | GET | `/v1/user/:uid` | Bearer | 否 | 获取用户信息 |
 | POST | `/v1/user` | Bearer | 否 | 创建用户 |
 | PUT | `/v1/user` | Bearer | 否 | 修改用户信息 |
 | DELETE | `/v1/user/:uid` | Bearer | 否 | 删除用户（仅本人） |
-| POST | `/v1/friends` | Bearer | 否 | 添加好友 |
+| POST | `/v1/friends` | Bearer | 否 | 直接添加好友（双向） |
 | GET | `/v1/friends/:uid` | Bearer | 否 | 好友列表（分页） |
 | GET | `/v1/nearbyfriends/:uid` | Bearer | 否 | 附近好友（分页，Geohash） |
+| GET | `/v1/nearby-users/:uid` | Bearer | 否 | 附近陌生人推荐（分页，Geohash） |
+| POST | `/v1/friend-requests` | Bearer | 否 | 发起好友请求 |
+| GET | `/v1/friend-requests/incoming` | Bearer | 否 | 收到的好友请求（分页） |
+| GET | `/v1/friend-requests/outgoing` | Bearer | 否 | 发出的好友请求（分页） |
+| PUT | `/v1/friend-requests/:id/accept` | Bearer | 否 | 同意好友请求 |
+| PUT | `/v1/friend-requests/:id/reject` | Bearer | 否 | 拒绝好友请求 |
+| POST | `/v1/blacklist` | Bearer | 否 | 拉黑用户 |
+| DELETE | `/v1/blacklist/:uid` | Bearer | 否 | 取消拉黑 |
+| GET | `/v1/blacklist` | Bearer | 否 | 黑名单列表（分页） |
+| GET | `/v1/users/online` | Bearer | 否 | 批量查询用户在线状态 |
 
 ### 统一响应格式
 
@@ -271,6 +291,11 @@ tls:
 | -2 | 服务内部错误 | 500 |
 | -3 | 认证失败 | 401 |
 | -4 | 权限不足 | 403 |
+| -5 | 已经是好友 | 409 |
+| -6 | 好友请求已存在 | 409 |
+| -7 | 好友请求不存在 | 404 |
+| -8 | 好友请求已非待处理状态 | 409 |
+| -9 | 已被对方拉黑 | 409 |
 
 ---
 
@@ -291,6 +316,8 @@ tls:
 | `login_attempts_total` | CounterVec | 登录尝试（分 success/fail） |
 | `user_creations_total` | Counter | 用户注册数 |
 | `friend_additions_total` | Counter | 好友添加数 |
+| `friend_requests_sent_total` | Counter | 好友请求发送数 |
+| `friend_requests_accepted_total` | Counter | 好友请求通过数 |
 
 **HTTP 指标：**
 
@@ -387,7 +414,10 @@ go tool cover -html=coverage.out
 ```bash
 docker build -t user-service:latest .
 docker run -d -p 8080:8080 \
-  -e MYSQL_DSN="user:pass@tcp(host:3306)/db?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true" \
+  -e MYSQL_HOST="host" \
+  -e MYSQL_USER="user" \
+  -e MYSQL_PASSWORD="pass" \
+  -e MYSQL_DATABASE="db" \
   -e JWT_SECRET="$(openssl rand -base64 32)" \
   user-service:latest
 ```
@@ -402,7 +432,10 @@ kubectl apply -k k8s/
 helm upgrade --install user-service ./helm/user-service \
   --namespace user-service --create-namespace \
   --set secret.jwtSecret="$(openssl rand -base64 32)" \
-  --set secret.mysqlDsn="user:pass@tcp(mysql:3306)/db?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true"
+  --set secret.mysqlHost="mysql" \
+  --set secret.mysqlUser="xgame" \
+  --set secret.mysqlPassword="password" \
+  --set secret.mysqlDatabase="bobby_test"
 ```
 
 ### 交叉编译

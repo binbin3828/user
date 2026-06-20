@@ -112,6 +112,9 @@ sudo cp -r pkg/config/config.yaml /opt/user-service/pkg/config/
 # 5. 修改配置（必须修改 JWT Secret 和数据库连接）
 sudo vi /opt/user-service/pkg/config/config.yaml
 
+# 5a. 执行数据库迁移
+cd /opt/user-service && ./UserServer migrate
+
 # 6. 配置 systemd 服务
 sudo tee /etc/systemd/system/user-service.service > /dev/null <<'EOF'
 [Unit]
@@ -124,7 +127,10 @@ Type=simple
 User=user-service
 Group=user-service
 WorkingDirectory=/opt/user-service
-Environment="DB_PASSWORD=your_db_password"
+Environment="MYSQL_HOST=your-db-host"
+Environment="MYSQL_PORT=3306"
+Environment="MYSQL_USER=your_db_user"
+Environment="MYSQL_PASSWORD=your_db_password"
 Environment="JWT_SECRET=your_long_random_secret"
 Environment="LOG_LEVEL=info"
 ExecStart=/opt/user-service/UserServer
@@ -151,21 +157,30 @@ curl http://localhost:8080/healthz
 # 1. 构建镜像
 docker build -t user-service:1.0.0 .
 
-# 2. 运行容器
+# 2. 执行数据库迁移（一次性容器）
+docker run --rm \
+  -e MYSQL_HOST="your-db-host" \
+  -e MYSQL_USER="your_db_user" \
+  -e MYSQL_PASSWORD="your_db_password" \
+  -e MYSQL_DATABASE="bobby_test" \
+  user-service:1.0.0 ./UserServer migrate
+
+# 3. 运行容器
 docker run -d \
   --name user-service \
   --restart unless-stopped \
   -p 8080:8080 \
-  -e DB_PASSWORD="your_db_password" \
+  -e MYSQL_HOST="your-db-host" \
+  -e MYSQL_PASSWORD="your_db_password" \
   -e JWT_SECRET="$(openssl rand -base64 32)" \
   -e LOG_LEVEL="info" \
   -v /opt/user-service/log:/app/log \
   user-service:1.0.0
 
-# 3. 验证
+# 4. 验证
 curl http://localhost:8080/healthz
 
-# 4. 查看日志
+# 5. 查看日志
 docker logs -f user-service
 ```
 
@@ -223,7 +238,10 @@ curl http://localhost:8080/healthz
 helm upgrade --install user-service ./helm/user-service \
   --namespace user-service --create-namespace \
   --set secret.jwtSecret="$(openssl rand -base64 32)" \
-  --set secret.mysqlDsn="xgame:password@tcp(mysql-host:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s" \
+  --set secret.mysqlHost="mysql-host" \
+  --set secret.mysqlUser="xgame" \
+  --set secret.mysqlPassword="password" \
+  --set secret.mysqlDatabase="bobby_test" \
   --set config.logLevel="info" \
   --set autoscaling.enabled=true \
   --set autoscaling.minReplicas=3 \
@@ -439,11 +457,39 @@ grep 'timeout\|canceled' log/user.log
 
 ### 初始化建表
 
+项目使用 GORM AutoMigrate，可通过以下方式执行迁移（与启动分离，确保只在单实例执行）：
+
+```bash
+# 二进制部署 — 部署前执行迁移
+cd /opt/user-service && ./UserServer migrate
+
+# Docker — 一次性容器执行迁移
+docker run --rm \
+  -e MYSQL_HOST=host -e MYSQL_USER=user -e MYSQL_PASSWORD=pass \
+  user-service:latest ./UserServer migrate
+
+# docker-compose — 自动执行（user-migrate 服务）
+docker-compose up -d  # user-migrate 在 user-service 前自动运行
+
+# Kubernetes (kustomize) — InitContainer 自动执行
+kubectl apply -k k8s/
+
+# Helm — pre-upgrade Hook 自动执行
+helm upgrade --install user-service ./helm/user-service --namespace user-service --create-namespace \
+  --set secret.jwtSecret="..." --set secret.mysqlPassword="..."
+```
+
+**迁移执行的模型列表**：`User`、`Friends`、`FriendRequest`、`Blacklist`、`PasswordResetToken`
+
+### 手动 SQL 建表（不推荐，仅作参考）
+
+如不使用 AutoMigrate，可用以下 SQL 手动建表：
+
 ```bash
 mysql -h <host> -u <user> -p <database> < sql/init.sql
 ```
 
-Kubernetes 可以通过 InitContainer 或 Job 执行：
+Kubernetes 可通过 Job 执行：
 
 ```yaml
 apiVersion: batch/v1
@@ -832,7 +878,23 @@ kubectl -n user-service rollout undo deployment/user-service
 
 ### 数据库迁移
 
-数据库结构变更时：
+数据库结构变更时，构建新镜像后执行迁移命令：
+
+```bash
+# 二进制部署
+/opt/user-service/UserServer migrate
+
+# Docker / K8s
+docker run --rm -e MYSQL_HOST=... user-service:latest ./UserServer migrate
+
+# Helm（自动执行，无需手动操作）
+# migration.enabled=true 时，每次 upgrade 自动通过 Hook Job 执行迁移
+```
+
+**迁移注意事项：**
+- AutoMigrate 只增不减（不会删除列、索引、表）
+- 滚动部署时迁移在 Pod 启动前执行，不会并发冲突
+- 迁移失败会阻止部署继续（Helm Hook 或 InitContainer 失败机制）
 
 ```sql
 -- 迁移脚本命名规范：YYYYMMDD_HHMMSS_description.sql
@@ -919,14 +981,20 @@ curl http://localhost:8080/readyz
 
 | 变量 | 必填 | 默认值 | 说明 |
 |------|------|--------|------|
-| `DB_PASSWORD` | 是* | - | 替换 DSN 中的 `${DB_PASSWORD}` |
-| `MYSQL_DSN` | 是* | - | 完整覆盖 DSN（优先级更高） |
+| `MYSQL_DSN` | 否 | - | 完整 DSN（优先级最高，设了则忽略下列 MYSQL_* 变量） |
+| `MYSQL_HOST` | 否 | 127.0.0.1 | 数据库地址 |
+| `MYSQL_PORT` | 否 | 3306 | 数据库端口 |
+| `MYSQL_USER` | 否 | root | 数据库用户名 |
+| `MYSQL_PASSWORD` | 是* | - | 数据库密码 |
+| `MYSQL_DATABASE` | 否 | bobby_test | 数据库名 |
 | `JWT_SECRET` | 是 | - | JWT 签名密钥 |
 | `LOG_LEVEL` | 否 | info | debug/info/warn/error |
+| `REDIS_ADDR` | 否 | - | Redis 地址，配置后启用分布式限流（多实例必设） |
+| `REDIS_PASSWORD` | 否 | - | Redis 密码 |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | 否 | - | 链路追踪导出地址（空=stdout） |
 | `OTEL_TRACE_SAMPLE_RATE` | 否 | 0.1 | 采样率 |
 
-> *DB_PASSWORD 和 MYSQL_DSN 至少设置一个
+> *`MYSQL_PASSWORD` 或 `MYSQL_DSN` 至少设置一个
 
 ### C. 紧急联系
 

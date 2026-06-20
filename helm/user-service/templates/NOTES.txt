@@ -30,8 +30,10 @@ Autoscaling is DISABLED ({{ .Values.replicaCount }} replicas).
 {{- if .Values.mysql.enabled }}
 MySQL is bundled with this chart for development only.
 {{- else }}
-MySQL is NOT bundled. Ensure an external MySQL instance is available and MYSQL_DSN is set.
+MySQL is NOT bundled. Ensure an external MySQL instance is available and set MYSQL_HOST/MYSQL_USER/MYSQL_PASSWORD or MYSQL_DSN.
 {{- end }}
 
-IMPORTANT: Change the JWT secret from the default value in production:
-  helm upgrade {{ .Release.Name }} . --set secret.jwtSecret="$(openssl rand -base64 32)"
+IMPORTANT: Change the JWT secret AND MySQL password from the default values in production:
+  helm upgrade {{ .Release.Name }} . \
+    --set secret.jwtSecret="$(openssl rand -base64 32)" \
+    --set secret.mysqlPassword="$(openssl rand -base64 24)"
