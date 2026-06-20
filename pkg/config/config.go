@@ -1,31 +1,34 @@
-/*
- * @Autor: Bobby
- * @Description: function to parsing .yaml file
- * @Date: 2022-06-06 15:45:11
- * @LastEditTime: 2022-06-07 21:52:10
- * @FilePath: \User\pkg\config\config.go
- */
 package config
 
 import (
+	"bytes"
+	"embed"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
 	viper2 "github.com/spf13/viper"
 )
 
-func Get(fileKey string) interface{} {
-	index := strings.Index(fileKey, ".")
-	fileName := fileKey[0:index]
-	key := fileKey[index+1:]
+//go:embed config.yaml
+var configFile embed.FS
 
-	viper := viper2.New()
-	viper.SetConfigName(fileName)
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath("../pkg/config")
+var v *viper2.Viper
 
-	if err := viper.ReadInConfig(); err != nil {
+func init() {
+	data, err := configFile.ReadFile("config.yaml")
+	if err != nil {
 		panic(err.Error())
 	}
-	return viper.Get(key)
+	v = viper2.New()
+	v.SetConfigType("yaml")
+	if err := v.ReadConfig(bytes.NewReader(data)); err != nil {
+		panic(err.Error())
+	}
+}
+
+func Get(fileKey string) interface{} {
+	index := strings.Index(fileKey, ".")
+	if index == -1 {
+		return v.Get(fileKey)
+	}
+	return v.Get(fileKey[index+1:])
 }
