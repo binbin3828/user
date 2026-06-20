@@ -10,3 +10,4 @@ data:
   OTEL_TRACE_SAMPLE_RATE: "0.1"
   GIN_MODE: "release"
   TLS_ENABLED: "false"
+  REDIS_ADDR: "redis.user-service.svc.cluster.local:6379"

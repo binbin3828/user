@@ -19,6 +19,9 @@ clean:
 	$(GOCLEAN)
 	rm -f $(BINARY_NAME)
 
+migrate: build
+	./$(BINARY_NAME) migrate
+
 # Cross compilation, when on window to build linux bin file
 build-linux:
 	env CGO_ENABLED=0 GOOS=linux GOARCH=amd64 $(GOBUILD) -o $(BINARY_UNIX) -v

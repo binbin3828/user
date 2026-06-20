@@ -13,3 +13,6 @@ data:
   {{- if .Values.config.otelExporterOtlpEndpoint }}
   OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.config.otelExporterOtlpEndpoint | quote }}
   {{- end }}
+  {{- if .Values.redis.addr }}
+  REDIS_ADDR: {{ .Values.redis.addr | quote }}
+  {{- end }}

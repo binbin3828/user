@@ -24,6 +24,34 @@ services:
     networks:
       - user-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: user-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    networks:
+      - user-network
+
+  user-migrate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-migrate
+    command: ["./UserServer", "migrate"]
+    restart: "no"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-xgame}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xgame123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bobby_test}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - user-network
+
   user-service:
     build:
       context: .
@@ -31,9 +59,14 @@ services:
     container_name: user-service
     restart: unless-stopped
     environment:
-      MYSQL_DSN: xgame:${MYSQL_PASSWORD:-xgame123}@tcp(mysql:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_USER: ${MYSQL_USER:-xgame}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xgame123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bobby_test}
       JWT_SECRET: ${JWT_SECRET:-prod-change-me-to-a-long-random-string}
       LOG_LEVEL: ${LOG_LEVEL:-debug}
+      REDIS_ADDR: redis:6379
       OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
       OTEL_TRACE_SAMPLE_RATE: ${OTEL_TRACE_SAMPLE_RATE:-0.1}
     ports:
