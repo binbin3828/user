@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+
+	"user/constant"
 )
 
 func (s *Service) LoggerMiddleware() gin.HandlerFunc {
@@ -27,10 +29,23 @@ func (s *Service) LoggerMiddleware() gin.HandlerFunc {
 	}
 }
 
+func httpStatusFromCode(code int) int {
+	switch code {
+	case constant.ERROR_PARAM_ERR:
+		return http.StatusBadRequest
+	case constant.ERROR_AUTH_FAIL:
+		return http.StatusUnauthorized
+	case constant.ERROR_PERMISSION_DENIED:
+		return http.StatusForbidden
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
 func (s *Service) returnError(c *gin.Context, code int, msg string) {
 	reqID := getReqID(c.Request.Context())
 	s.Logger.Errorf("[%s] api: %s, code: %d, msg: %s", reqID, c.Request.RequestURI, code, msg)
-	c.JSON(http.StatusOK, gin.H{"code": code, "msg": msg})
+	c.JSON(httpStatusFromCode(code), gin.H{"code": code, "msg": msg})
 }
 
 func (s *Service) returnErrorf(c *gin.Context, code int, format string, a ...interface{}) {

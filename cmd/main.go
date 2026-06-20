@@ -34,6 +34,12 @@ func main() {
 		log.Fatalf("mysql init failed: %v", err)
 	}
 
+	sqlDB, err := db.DB()
+	if err != nil {
+		log.Fatalf("get sql.DB failed: %v", err)
+	}
+	service.RegisterDBMetrics(sqlDB)
+
 	if err := db.AutoMigrate(&model.User{}, &model.Friends{}); err != nil {
 		log.Fatalf("auto migrate failed: %v", err)
 	}
@@ -78,7 +84,7 @@ func main() {
 		zapLog.Errorf("server shutdown error: %v", err)
 	}
 
-	sqlDB, err := db.DB()
+	sqlDB, err = db.DB()
 	if err == nil {
 		sqlDB.Close()
 	}

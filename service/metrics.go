@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
@@ -22,7 +23,7 @@ var (
 		prometheus.HistogramOpts{
 			Name:    "http_request_duration_seconds",
 			Help:    "Duration of HTTP requests in seconds",
-			Buckets: prometheus.DefBuckets,
+			Buckets: []float64{.01, .05, .1, .5, 1, 3, 5, 10, 30},
 		},
 		[]string{"method", "path"},
 	)
@@ -37,6 +38,7 @@ var (
 
 func init() {
 	prometheus.MustRegister(reqCnt, reqDur, reqInFlight)
+	prometheus.Register(collectors.NewGoCollector())
 }
 
 func MetricsHandler() gin.HandlerFunc {
