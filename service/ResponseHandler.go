@@ -1,40 +1,40 @@
 package service
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"net/http"
-	"runtime/debug"
 	"time"
-	"user/constant"
-	"user/pkg/util"
+
+	"github.com/gin-gonic/gin"
 )
 
-type handler func(w http.ResponseWriter, req *http.Request) (data interface{}, err error)
+func (s *Service) LoggerMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		s.Logger.Infof("request begin: Method: %v, request url: %s", c.Request.Method, c.Request.Host+c.Request.RequestURI)
 
-func (s *Service) responseHandler(h handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, req *http.Request) {
-
-		defer func() {
-			if errRecover := recover(); errRecover != nil {
-				s.Logger.Error("api: ", req.RequestURI, " errRecover: ", errRecover)
-				s.Logger.Errorf("panic:%s\n", string(debug.Stack()))
-			}
-		}()
-
-		s.Logger.Infof("request begin: Method: %v, request url: %s", req.Method, req.Host+req.RequestURI)
-		reqBody, _ := io.ReadAll(req.Body)
-		s.Logger.Infof("request body: %s", reqBody)
-		startTime := time.Now().UnixNano() / 1e6
-		data, err := h(w, req)
-		s.Logger.Infof("exec end: api: %v, execute time : %vms,", req.RequestURI, time.Now().UnixNano()/1e6-startTime)
-		if err != nil {
-			code := constant.ERROR_MYSQL_ERR
-			if ce, ok := err.(*util.CodeError); ok {
-				code = ce.Code
-			}
-			util.ReturnError(w, s.Logger, code, err.Error())
-			return
+		if c.Request.Body != nil {
+			body, _ := c.GetRawData()
+			s.Logger.Infof("request body: %s", body)
+			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
-		util.ReturnSucc(w, s.Logger, data)
+
+		startTime := time.Now()
+		c.Next()
+		s.Logger.Infof("exec end: api: %v, execute time: %vms", c.Request.RequestURI, time.Since(startTime).Milliseconds())
 	}
+}
+
+func (s *Service) returnError(c *gin.Context, code int, msg string) {
+	s.Logger.Errorf("api: %s, code: %d, msg: %s", c.Request.RequestURI, code, msg)
+	c.JSON(http.StatusOK, gin.H{"code": code, "msg": msg})
+}
+
+func (s *Service) returnErrorf(c *gin.Context, code int, format string, a ...interface{}) {
+	s.returnError(c, code, fmt.Sprintf(format, a...))
+}
+
+func (s *Service) returnSuccess(c *gin.Context, data interface{}) {
+	c.JSON(http.StatusOK, gin.H{"code": 0, "data": data})
 }

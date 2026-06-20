@@ -3,11 +3,12 @@ package test
 import (
 	"errors"
 	"strings"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
-	"user/constant"
 	"user/model"
-	"user/pkg/util"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestAddFriend_Success(t *testing.T) {
@@ -16,21 +17,22 @@ func TestAddFriend_Success(t *testing.T) {
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
 
 	body := `{"uid":1,"fri":2}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	data, err := svc.AddFriend(w, req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	code := int(resp["code"].(float64))
+	if code != 0 {
+		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	result, ok := data.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map, got %T", data)
+	data := resp["data"].(map[string]interface{})
+	if int(data["uid"].(float64)) != 1 || int(data["friend_id"].(float64)) != 2 {
+		t.Errorf("got uid=%v friend_id=%v, want uid=1 friend_id=2", data["uid"], data["friend_id"])
 	}
-	if int(result["uid"].(int)) != 1 || int(result["friend_id"].(int)) != 2 {
-		t.Errorf("got uid=%v friend_id=%v, want uid=1 friend_id=2", result["uid"], result["friend_id"])
-	}
-	// verify bidirectional friendship
 	found := 0
 	for _, f := range friendsDao.Friends {
 		if f.Uid == 1 && f.FriendID == 2 {
@@ -48,19 +50,16 @@ func TestAddFriend_Success(t *testing.T) {
 func TestAddFriend_MissingUID(t *testing.T) {
 	svc, _, _ := newTestService()
 	body := `{"fri":2}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	_, err := svc.AddFriend(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	codeErr, ok := err.(*util.CodeError)
-	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
-		t.Errorf("expected CodeError code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
-	}
-	if codeErr.Error() != "param uid not set" {
-		t.Errorf("expected 'param uid not set', got '%s'", codeErr.Error())
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) != -1 || resp["msg"] != "param uid not set" {
+		t.Errorf("got code=%v msg=%v, want code=-1 msg='param uid not set'", resp["code"], resp["msg"])
 	}
 }
 
@@ -69,31 +68,32 @@ func TestAddFriend_MissingFri(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	body := `{"uid":1}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	_, err := svc.AddFriend(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	codeErr, ok := err.(*util.CodeError)
-	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
-		t.Errorf("expected CodeError code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
-	}
-	if codeErr.Error() != "param fri not set" {
-		t.Errorf("expected 'param fri not set', got '%s'", codeErr.Error())
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) != -1 || resp["msg"] != "param fri not set" {
+		t.Errorf("got code=%v msg=%v, want code=-1 msg='param fri not set'", resp["code"], resp["msg"])
 	}
 }
 
 func TestAddFriend_UserNotFound(t *testing.T) {
 	svc, _, _ := newTestService()
 	body := `{"uid":999,"fri":2}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	_, err := svc.AddFriend(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
 }
 
@@ -102,12 +102,16 @@ func TestAddFriend_FriendNotFound(t *testing.T) {
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
 	body := `{"uid":1,"fri":999}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	_, err := svc.AddFriend(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
 }
 
@@ -118,14 +122,18 @@ func TestAddFriend_DAOAddError(t *testing.T) {
 	friendsDao.AddFriendErr = errors.New("db error")
 
 	body := `{"uid":1,"fri":2}`
-	req := httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("POST", "/friends", strings.NewReader(body))
 
-	_, err := svc.AddFriend(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.AddFriend(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
-	if err.Error() != "db error" {
-		t.Errorf("expected 'db error', got '%v'", err)
+	if resp["msg"] != "db error" {
+		t.Errorf("expected 'db error', got '%v'", resp["msg"])
 	}
 }

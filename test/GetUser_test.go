@@ -1,13 +1,18 @@
 package test
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
-	"user/constant"
 	"user/model"
-	"user/pkg/util"
 	"user/service"
+
+	"github.com/gin-gonic/gin"
 )
+
+func init() {
+	gin.SetMode(gin.TestMode)
+}
 
 func newTestService() (*service.Service, *MockUserDao, *MockFriendsDao) {
 	log := &MockLogger{}
@@ -21,61 +26,72 @@ func TestGetUser_Success(t *testing.T) {
 	svc, userDao, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "bobby", Address: "shenzhen"}
 
-	req := httptest.NewRequest("GET", "/user/1", nil)
-	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/user/1", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "1"}}
 
-	data, err := svc.GetUser(w, req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	svc.GetUser(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	code := int(resp["code"].(float64))
+	if code != 0 {
+		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	user, ok := data.(*model.User)
-	if !ok {
-		t.Fatalf("expected *model.User, got %T", data)
-	}
-	if user.Id != 1 || user.Name != "bobby" {
-		t.Errorf("got user %+v, want id=1 name=bobby", user)
+	data := resp["data"].(map[string]interface{})
+	if int(data["id"].(float64)) != 1 || data["name"] != "bobby" {
+		t.Errorf("got %+v, want id=1 name=bobby", data)
 	}
 }
 
 func TestGetUser_MissingUID(t *testing.T) {
 	svc, _, _ := newTestService()
-	req := httptest.NewRequest("GET", "/user/", nil)
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/user/", nil)
+	// no params, so c.Param("uid") returns ""
 
-	_, err := svc.GetUser(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	codeErr, ok := err.(*util.CodeError)
-	if !ok || codeErr.Code != constant.ERROR_PARAM_ERR {
-		t.Errorf("expected CodeError with code %d, got %T code=%d", constant.ERROR_PARAM_ERR, err, codeErr.Code)
+	svc.GetUser(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) != -1 {
+		t.Errorf("expected code=-1, got code=%v", resp["code"])
 	}
 }
 
 func TestGetUser_InvalidUID(t *testing.T) {
 	svc, _, _ := newTestService()
-	req := httptest.NewRequest("GET", "/user/abc", nil)
-	req = chiSetURLParam(req, "uid", "abc")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/user/abc", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "abc"}}
 
-	_, err := svc.GetUser(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.GetUser(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
 }
 
 func TestGetUser_NotFound(t *testing.T) {
 	svc, _, _ := newTestService()
-	req := httptest.NewRequest("GET", "/user/999", nil)
-	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/user/999", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "999"}}
 
-	_, err := svc.GetUser(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.GetUser(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
-	if err.Error() != "record not found" {
-		t.Errorf("expected 'record not found', got '%v'", err)
+	if resp["msg"] != "record not found" {
+		t.Errorf("expected 'record not found', got '%v'", resp["msg"])
 	}
 }

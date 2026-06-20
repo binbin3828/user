@@ -2,9 +2,12 @@ package test
 
 import (
 	"context"
+	"encoding/json"
 	"net/http/httptest"
 	"testing"
 	"user/model"
+
+	"github.com/gin-gonic/gin"
 )
 
 func TestGetFriendsList_Success(t *testing.T) {
@@ -13,53 +16,62 @@ func TestGetFriendsList_Success(t *testing.T) {
 	userDao.Users[2] = &model.User{Id: 2, Name: "bob"}
 	friendsDao.AddFriend(context.Background(), 1, 2)
 
-	req := httptest.NewRequest("GET", "/friends/1", nil)
-	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/friends/1", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "1"}}
 
-	data, err := svc.GetFriendsList(w, req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	svc.GetFriendsList(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	code := int(resp["code"].(float64))
+	if code != 0 {
+		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	result, ok := data.(map[string]interface{})
-	if !ok {
-		t.Fatalf("expected map, got %T", data)
+	data := resp["data"].(map[string]interface{})
+	if int(data["uid"].(float64)) != 1 {
+		t.Errorf("expected uid=1, got %v", data["uid"])
 	}
-	if result["uid"].(int) != 1 {
-		t.Errorf("expected uid=1, got %v", result["uid"])
-	}
-	list, ok := result["list"].([]*model.RetListFriends)
-	if !ok {
-		t.Fatalf("expected []*RetListFriends, got %T", result["list"])
-	}
+	list := data["list"].([]interface{})
 	if len(list) != 1 {
 		t.Fatalf("expected 1 friend, got %d", len(list))
 	}
-	if list[0].FriUid != 2 {
-		t.Errorf("expected fri_uid=2, got %d", list[0].FriUid)
+	first := list[0].(map[string]interface{})
+	if int(first["fri_uid"].(float64)) != 2 {
+		t.Errorf("expected fri_uid=2, got %v", first["fri_uid"])
 	}
 }
 
 func TestGetFriendsList_MissingUID(t *testing.T) {
 	svc, _, _ := newTestService()
-	req := httptest.NewRequest("GET", "/friends/", nil)
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/friends/", nil)
+	// no params, so c.Param("uid") returns ""
 
-	_, err := svc.GetFriendsList(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.GetFriendsList(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
 }
 
 func TestGetFriendsList_UserNotFound(t *testing.T) {
 	svc, _, _ := newTestService()
-	req := httptest.NewRequest("GET", "/friends/999", nil)
-	req = chiSetURLParam(req, "uid", "999")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/friends/999", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "999"}}
 
-	_, err := svc.GetFriendsList(w, req)
-	if err == nil {
-		t.Fatal("expected error, got nil")
+	svc.GetFriendsList(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if int(resp["code"].(float64)) == 0 {
+		t.Fatal("expected error, got success")
 	}
 }
 
@@ -67,16 +79,21 @@ func TestGetFriendsList_EmptyList(t *testing.T) {
 	svc, userDao, _ := newTestService()
 	userDao.Users[1] = &model.User{Id: 1, Name: "alice"}
 
-	req := httptest.NewRequest("GET", "/friends/1", nil)
-	req = chiSetURLParam(req, "uid", "1")
 	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest("GET", "/friends/1", nil)
+	c.Params = gin.Params{{Key: "uid", Value: "1"}}
 
-	data, err := svc.GetFriendsList(w, req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+	svc.GetFriendsList(c)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	code := int(resp["code"].(float64))
+	if code != 0 {
+		t.Fatalf("expected code=0, got %d: %s", code, resp["msg"])
 	}
-	result := data.(map[string]interface{})
-	list := result["list"].([]*model.RetListFriends)
+	data := resp["data"].(map[string]interface{})
+	list, _ := data["list"].([]interface{})
 	if len(list) != 0 {
 		t.Errorf("expected empty list, got %d items", len(list))
 	}

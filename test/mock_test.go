@@ -4,13 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"time"
 	"user/model"
 	"user/pkg/logger"
 	"user/pkg/util"
-
-	"github.com/go-chi/chi/v5"
 )
 
 type MockLogger struct{}
@@ -25,12 +22,6 @@ func (m *MockLogger) Warn(args ...interface{})                  {}
 func (m *MockLogger) Warnf(format string, args ...interface{})  {}
 
 var _ logger.Logger = (*MockLogger)(nil)
-
-func chiSetURLParam(r *http.Request, key, value string) *http.Request {
-	routeCtx := chi.NewRouteContext()
-	routeCtx.URLParams.Add(key, value)
-	return r.WithContext(context.WithValue(r.Context(), chi.RouteCtxKey, routeCtx))
-}
 
 type MockUserDao struct {
 	Users  map[int]*model.User
@@ -140,8 +131,8 @@ func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.
 	if m.GetFriendsListErr != nil {
 		return nil, m.GetFriendsListErr
 	}
-	var list []*model.RetListFriends
 	now := util.JsonTime(time.Now())
+	var list []*model.RetListFriends
 	for _, f := range m.Friends {
 		if f.Uid == uid {
 			list = append(list, &model.RetListFriends{
@@ -151,6 +142,10 @@ func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.
 			})
 		}
 	}
+	if list == nil {
+		// return empty slice, not nil, so JSON serializes as [] not null
+		return []*model.RetListFriends{}, nil
+	}
 	return list, nil
 }
 
@@ -158,8 +153,8 @@ func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr st
 	if m.GetNearbyFriendErr != nil {
 		return nil, m.GetNearbyFriendErr
 	}
-	var list []*model.RetNearbyFriendsList
 	now := util.JsonTime(time.Now())
+	var list []*model.RetNearbyFriendsList
 	for _, f := range m.Friends {
 		if f.Uid == uid {
 			list = append(list, &model.RetNearbyFriendsList{
@@ -171,6 +166,9 @@ func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr st
 				LocGeohash: subStr + "xxx",
 			})
 		}
+	}
+	if list == nil {
+		return []*model.RetNearbyFriendsList{}, nil
 	}
 	return list, nil
 }

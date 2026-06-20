@@ -2,102 +2,141 @@ package service
 
 import (
 	"encoding/json"
-	"io"
-	"net/http"
 	"strconv"
 	"user/constant"
 	"user/pkg/util"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 )
 
-func (s *Service) GetNearbyFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	uidStr := chi.URLParam(r, "uid")
+func (s *Service) GetNearbyFriend(c *gin.Context) {
+	uidStr := c.Param("uid")
 	if uidStr == "" {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
+		s.returnError(c, constant.ERROR_PARAM_ERR, "param uid not set")
+		return
 	}
 	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
-		return nil, err
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
 
-	info, err := s.UserDao.FindUser(ctx, uid)
+	info, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 	geohashStr := info.LocGeohash
-
 	likeSubStr := geohashStr[0:6]
 
-	list, err := s.FriendsDao.GetNearbyFriend(ctx, uid, likeSubStr)
+	list, err := s.FriendsDao.GetNearbyFriend(c.Request.Context(), uid, likeSubStr)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
-	data := make(map[string]interface{})
-	data["uid"] = uid
-	data["list"] = list
-	return data, nil
+	s.returnSuccess(c, gin.H{
+		"uid":  uid,
+		"list": list,
+	})
 }
 
-func (s *Service) GetFriendsList(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	uidStr := chi.URLParam(r, "uid")
+func (s *Service) GetFriendsList(c *gin.Context) {
+	uidStr := c.Param("uid")
 	if uidStr == "" {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
+		s.returnError(c, constant.ERROR_PARAM_ERR, "param uid not set")
+		return
 	}
 	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
-		return nil, err
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
 
-	_, err = s.UserDao.FindUser(ctx, uid)
+	_, err = s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	list, err := s.FriendsDao.GetFriendsList(ctx, uid)
+	list, err := s.FriendsDao.GetFriendsList(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	data := make(map[string]interface{})
-	data["uid"] = uid
-	data["list"] = list
-	return data, nil
+	s.returnSuccess(c, gin.H{
+		"uid":  uid,
+		"list": list,
+	})
 }
 
-func (s *Service) AddFriend(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	reqBody, _ := io.ReadAll(r.Body)
+func (s *Service) AddFriend(c *gin.Context) {
+	reqBody, _ := c.GetRawData()
 
 	var req addFriendReq
 	if err := json.Unmarshal(reqBody, &req); err != nil {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
 	if err := validateReq(req); err != nil {
-		return nil, err
+		code := constant.ERROR_PARAM_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
 	uid := int(req.Uid)
 	friendID := int(req.Fri)
 
-	_, err := s.UserDao.FindUser(ctx, uid)
+	_, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
-	_, err = s.UserDao.FindUser(ctx, friendID)
+	_, err = s.UserDao.FindUser(c.Request.Context(), friendID)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
-	err = s.FriendsDao.AddFriend(ctx, uid, friendID)
+	err = s.FriendsDao.AddFriend(c.Request.Context(), uid, friendID)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
-	data := make(map[string]interface{})
-	data["uid"] = uid
-	data["friend_id"] = friendID
-	return data, nil
+	s.returnSuccess(c, gin.H{
+		"uid":       uid,
+		"friend_id": friendID,
+	})
 }

@@ -2,45 +2,53 @@ package service
 
 import (
 	"encoding/json"
-	"io"
-	"net/http"
 	"strconv"
 	"user/constant"
 	"user/model"
 	"user/pkg/util"
 
-	"github.com/go-chi/chi/v5"
+	"github.com/gin-gonic/gin"
 	"github.com/mmcloughlin/geohash"
 )
 
-func (s *Service) GetUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	uidStr := chi.URLParam(r, "uid")
+func (s *Service) GetUser(c *gin.Context) {
+	uidStr := c.Param("uid")
 	if uidStr == "" {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
+		s.returnError(c, constant.ERROR_PARAM_ERR, "param uid not set")
+		return
 	}
 	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
-		return nil, err
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
-	userInfo, err := s.UserDao.FindUser(ctx, uid)
+	userInfo, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	return userInfo, nil
+	s.returnSuccess(c, userInfo)
 }
 
-func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	reqBody, _ := io.ReadAll(r.Body)
-	s.Logger.Infof("request body: %s", reqBody)
+func (s *Service) CreateUser(c *gin.Context) {
+	reqBody, _ := c.GetRawData()
 
 	var req createUserReq
 	if err := json.Unmarshal(reqBody, &req); err != nil {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
 	if err := validateReq(req); err != nil {
-		return nil, err
+		code := constant.ERROR_PARAM_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
 	user := model.User{
@@ -57,45 +65,66 @@ func (s *Service) CreateUser(w http.ResponseWriter, r *http.Request) (interface{
 		user.LocGeohash = hash_base32
 	}
 
-	err := s.UserDao.CreateUser(ctx, &user)
+	err := s.UserDao.CreateUser(c.Request.Context(), &user)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 
-	info, err := s.UserDao.FindUser(ctx, user.Id)
+	info, err := s.UserDao.FindUser(c.Request.Context(), user.Id)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	return info, nil
+	s.returnSuccess(c, info)
 }
 
-func (s *Service) DeleteUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	uidStr := chi.URLParam(r, "uid")
+func (s *Service) DeleteUser(c *gin.Context) {
+	uidStr := c.Param("uid")
 	if uidStr == "" {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, "param uid not set")
+		s.returnError(c, constant.ERROR_PARAM_ERR, "param uid not set")
+		return
 	}
 	uid, err := strconv.Atoi(uidStr)
 	if err != nil {
-		return nil, err
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
-	err = s.UserDao.DeleteUser(ctx, uid)
+	err = s.UserDao.DeleteUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	return "delete succ", nil
+	s.returnSuccess(c, "delete succ")
 }
 
-func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{}, error) {
-	ctx := r.Context()
-	reqBody, _ := io.ReadAll(r.Body)
+func (s *Service) ModifyUser(c *gin.Context) {
+	reqBody, _ := c.GetRawData()
 
 	var req modifyUserReq
 	if err := json.Unmarshal(reqBody, &req); err != nil {
-		return nil, util.NewCodeError(constant.ERROR_PARAM_ERR, err.Error())
+		s.returnError(c, constant.ERROR_PARAM_ERR, err.Error())
+		return
 	}
 	if err := validateReq(req); err != nil {
-		return nil, err
+		code := constant.ERROR_PARAM_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
 	uid := int(req.Id)
 
@@ -129,13 +158,23 @@ func (s *Service) ModifyUser(w http.ResponseWriter, r *http.Request) (interface{
 		modifyArr["loc_geohash"] = hash_base32
 	}
 
-	err := s.UserDao.UpdateUser(ctx, uid, modifyArr)
+	err := s.UserDao.UpdateUser(c.Request.Context(), uid, modifyArr)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	info, err := s.UserDao.FindUser(ctx, uid)
+	info, err := s.UserDao.FindUser(c.Request.Context(), uid)
 	if err != nil {
-		return nil, err
+		code := constant.ERROR_MYSQL_ERR
+		if ce, ok := err.(*util.CodeError); ok {
+			code = ce.Code
+		}
+		s.returnError(c, code, err.Error())
+		return
 	}
-	return info, nil
+	s.returnSuccess(c, info)
 }
