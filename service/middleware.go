@@ -3,13 +3,36 @@ package service
 import (
 	"context"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
 	"user/constant"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
+
+type ctxKey string
+
+const reqIDKey ctxKey = "request_id"
+
+func getReqID(ctx context.Context) string {
+	id, _ := ctx.Value(reqIDKey).(string)
+	return id
+}
+
+func RequestID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		id := c.GetHeader("X-Request-ID")
+		if id == "" {
+			id = uuid.NewString()
+		}
+		c.Set(string(reqIDKey), id)
+		c.Header("X-Request-ID", id)
+		c.Next()
+	}
+}
 
 func (s *Service) AuthRequired() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -67,5 +90,25 @@ func RequestTimeout(timeout time.Duration) gin.HandlerFunc {
 		defer cancel()
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
+	}
+}
+
+func (s *Service) AuditLog() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Next()
+
+		userID, _ := c.Get("user_id")
+		uidStr := ""
+		if id, ok := userID.(int); ok {
+			uidStr = strconv.Itoa(id)
+		}
+
+		reqID := getReqID(c.Request.Context())
+		status := c.Writer.Status()
+		method := c.Request.Method
+		path := c.Request.URL.Path
+
+		s.Logger.Infof("[audit] request_id=%s user_id=%s method=%s path=%s status=%d",
+			reqID, uidStr, method, path, status)
 	}
 }

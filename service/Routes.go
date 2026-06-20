@@ -9,13 +9,18 @@ import (
 func NewRouter(s *Service) *gin.Engine {
 	r := gin.New()
 	r.Use(gin.Recovery())
+	r.Use(RequestID())
 	r.Use(CORS())
+	r.Use(TracingMiddleware("user-service"))
+	r.Use(MetricsMiddleware())
 	r.Use(s.LoggerMiddleware())
 	r.Use(MaxBodySize())
 	r.Use(RequestTimeout(30 * time.Second))
+	r.Use(s.AuditLog())
 
 	r.GET("/healthz", s.Healthz)
 	r.GET("/readyz", s.Readyz)
+	r.GET("/metrics", MetricsHandler())
 	r.POST("/auth/login", s.Login)
 
 	auth := r.Group("")

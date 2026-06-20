@@ -7,8 +7,13 @@ import (
 	"user/pkg/logger"
 	"user/pkg/util"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 	"gorm.io/gorm"
 )
+
+var daoFriendsTracer = otel.Tracer("dao.friends")
 
 type IFriendsDao interface {
 	AddFriend(ctx context.Context, uid, friendID int) error
@@ -30,6 +35,14 @@ func NewFriendsDao(db *gorm.DB, log logger.Logger) *FriendsDao {
 }
 
 func (T *FriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr string, limit, offset int) ([]*model.RetNearbyFriendsList, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.GetNearbyFriend",
+		trace.WithAttributes(
+			attribute.Int("uid", uid),
+			attribute.String("geohash_prefix", subStr),
+		),
+	)
+	defer span.End()
+
 	var list []*model.RetNearbyFriendsList
 	T.logger.Debug("substr:", subStr)
 	subStr = subStr + "%"
@@ -41,6 +54,9 @@ func (T *FriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr string
 }
 
 func (T *FriendsDao) CountNearbyFriend(ctx context.Context, uid int, subStr string) (int64, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.CountNearbyFriend")
+	defer span.End()
+
 	var total int64
 	subStr = subStr + "%"
 	err := T.db.WithContext(ctx).Raw("select COUNT(*) from friends,user where friends.uid = ? AND friends.fri = user.id AND user.loc_geohash LIKE ?", uid, subStr).Scan(&total).Error
@@ -51,6 +67,9 @@ func (T *FriendsDao) CountNearbyFriend(ctx context.Context, uid int, subStr stri
 }
 
 func (T *FriendsDao) GetFriendsList(ctx context.Context, uid int, limit, offset int) ([]*model.RetListFriends, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.GetFriendsList", trace.WithAttributes(attribute.Int("uid", uid)))
+	defer span.End()
+
 	var list []*model.RetListFriends
 	err := T.db.WithContext(ctx).Raw("select user.id as fri_uid,user.name as fri_name, friends.create_time from friends,user where friends.uid = ? AND friends.fri = user.id LIMIT ? OFFSET ?", uid, limit, offset).Scan(&list).Error
 	if err != nil {
@@ -60,6 +79,9 @@ func (T *FriendsDao) GetFriendsList(ctx context.Context, uid int, limit, offset 
 }
 
 func (T *FriendsDao) CountFriendsList(ctx context.Context, uid int) (int64, error) {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.CountFriendsList", trace.WithAttributes(attribute.Int("uid", uid)))
+	defer span.End()
+
 	var total int64
 	err := T.db.WithContext(ctx).Raw("select COUNT(*) from friends where uid = ?", uid).Scan(&total).Error
 	if err != nil {
@@ -69,6 +91,14 @@ func (T *FriendsDao) CountFriendsList(ctx context.Context, uid int) (int64, erro
 }
 
 func (T *FriendsDao) AddFriend(ctx context.Context, uid, friendID int) error {
+	ctx, span := daoFriendsTracer.Start(ctx, "FriendsDao.AddFriend",
+		trace.WithAttributes(
+			attribute.Int("uid", uid),
+			attribute.Int("friend_id", friendID),
+		),
+	)
+	defer span.End()
+
 	friends1 := model.Friends{
 		Uid:        uid,
 		FriendID:   friendID,

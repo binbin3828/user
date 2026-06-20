@@ -19,6 +19,16 @@ import (
 func main() {
 	zapLog := logger.NewZapLogger()
 
+	tp, err := service.InitTracerProvider("user-service")
+	if err != nil {
+		log.Fatalf("tracer provider init failed: %v", err)
+	}
+	defer func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		tp.Shutdown(ctx)
+	}()
+
 	db, err := dbconn.NewMysql(zapLog)
 	if err != nil {
 		log.Fatalf("mysql init failed: %v", err)

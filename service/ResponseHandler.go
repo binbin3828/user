@@ -12,22 +12,24 @@ import (
 
 func (s *Service) LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		s.Logger.Infof("request begin: Method: %v, request url: %s", c.Request.Method, c.Request.Host+c.Request.RequestURI)
+		reqID := getReqID(c.Request.Context())
+		s.Logger.Infof("[%s] request begin: Method: %v, request url: %s", reqID, c.Request.Method, c.Request.Host+c.Request.RequestURI)
 
 		if c.Request.Body != nil {
 			body, _ := c.GetRawData()
-			s.Logger.Infof("request body: %s", body)
+			s.Logger.Infof("[%s] request body: %s", reqID, body)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
 
 		startTime := time.Now()
 		c.Next()
-		s.Logger.Infof("exec end: api: %v, execute time: %vms", c.Request.RequestURI, time.Since(startTime).Milliseconds())
+		s.Logger.Infof("[%s] exec end: api: %v, execute time: %vms", reqID, c.Request.RequestURI, time.Since(startTime).Milliseconds())
 	}
 }
 
 func (s *Service) returnError(c *gin.Context, code int, msg string) {
-	s.Logger.Errorf("api: %s, code: %d, msg: %s", c.Request.RequestURI, code, msg)
+	reqID := getReqID(c.Request.Context())
+	s.Logger.Errorf("[%s] api: %s, code: %d, msg: %s", reqID, c.Request.RequestURI, code, msg)
 	c.JSON(http.StatusOK, gin.H{"code": code, "msg": msg})
 }
 
