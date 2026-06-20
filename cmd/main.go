@@ -1,8 +1,13 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 	"user/dao"
 	"user/pkg/dbconn"
 	"user/pkg/logger"
@@ -11,7 +16,6 @@ import (
 
 func main() {
 	zapLog := logger.NewZapLogger()
-	defer zapLog.Sync()
 
 	db, err := dbconn.NewMysql(zapLog)
 	if err != nil {
@@ -24,5 +28,34 @@ func main() {
 	svc := service.NewService(zapLog, userDao, friendsDao)
 	router := service.NewRouter(svc)
 
-	log.Fatal(http.ListenAndServe(":8080", router))
+	server := &http.Server{
+		Addr:    ":8080",
+		Handler: router,
+	}
+
+	go func() {
+		zapLog.Infof("server starting on :8080")
+		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-quit
+	zapLog.Infof("received signal %v, shutting down...", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := server.Shutdown(ctx); err != nil {
+		zapLog.Errorf("server shutdown error: %v", err)
+	}
+
+	sqlDB, err := db.DB()
+	if err == nil {
+		sqlDB.Close()
+	}
+
+	zapLog.Sync()
 }
