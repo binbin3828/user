@@ -1,9 +1,12 @@
 mysql:
   driveName: mysql
-  dataSourceName: xgame:xingdong888@tcp(121.196.204.236:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+  dataSourceName: xgame:${DB_PASSWORD}@tcp(121.196.204.236:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
   maxIdle: 25
   maxOpen: 50
   maxLifetime: 1
+
+cors:
+  allowedOrigins: "*"
 
 jwt:
   secret: change-me-in-production-use-a-long-random-string

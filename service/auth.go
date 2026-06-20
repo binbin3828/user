@@ -20,7 +20,7 @@ type Claims struct {
 func jwtSecret() []byte {
 	s, ok := config.Get("config.jwt.secret").(string)
 	if !ok || s == "" {
-		return []byte("default-dev-secret")
+		panic("FATAL: jwt.secret is not configured. Set it in config.yaml or via JWT_SECRET env var.")
 	}
 	return []byte(s)
 }
@@ -77,10 +77,12 @@ func (s *Service) Login(c *gin.Context) {
 	}
 
 	if !checkPassword(req.Password, user.Password) {
+		loginAttempts.WithLabelValues("fail").Inc()
 		s.returnError(c, constant.ERROR_AUTH_FAIL, "invalid credentials")
 		return
 	}
 
+	loginAttempts.WithLabelValues("success").Inc()
 	token, err := s.generateToken(user.Id)
 	if err != nil {
 		s.returnError(c, constant.ERROR_MYSQL_ERR, "internal error")

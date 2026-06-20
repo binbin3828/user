@@ -11,6 +11,28 @@ import (
 )
 
 var (
+	loginAttempts = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "login_attempts_total",
+			Help: "Total number of login attempts",
+		},
+		[]string{"status"},
+	)
+
+	userCreations = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "user_creations_total",
+			Help: "Total number of user registrations",
+		},
+	)
+
+	friendAdditions = prometheus.NewCounter(
+		prometheus.CounterOpts{
+			Name: "friend_additions_total",
+			Help: "Total number of friend additions",
+		},
+	)
+
 	reqCnt = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
@@ -37,7 +59,7 @@ var (
 )
 
 func init() {
-	prometheus.MustRegister(reqCnt, reqDur, reqInFlight)
+	prometheus.MustRegister(reqCnt, reqDur, reqInFlight, loginAttempts, userCreations, friendAdditions)
 	prometheus.Register(collectors.NewGoCollector())
 }
 

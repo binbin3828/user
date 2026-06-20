@@ -2,6 +2,8 @@ package dbconn
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 	"user/pkg/config"
 	"user/pkg/logger"
@@ -22,7 +24,13 @@ type MysqlConf struct {
 func NewMysql(log logger.Logger) (*gorm.DB, error) {
 	var mysqlConf MysqlConf
 	mysqlConf.DriveName = config.Get("config.mysql.driveName").(string)
-	mysqlConf.DataSourceName = config.Get("config.mysql.dataSourceName").(string)
+	dsn := config.Get("config.mysql.dataSourceName").(string)
+	if envDSN := os.Getenv("MYSQL_DSN"); envDSN != "" {
+		dsn = envDSN
+	} else if pwd := os.Getenv("DB_PASSWORD"); pwd != "" {
+		dsn = strings.ReplaceAll(dsn, "${DB_PASSWORD}", pwd)
+	}
+	mysqlConf.DataSourceName = dsn
 	mysqlConf.MaxIdle = config.Get("config.mysql.maxIdle").(int)
 	mysqlConf.MaxOpen = config.Get("config.mysql.maxOpen").(int)
 	mysqlConf.MaxLifetime = config.Get("config.mysql.maxLifetime").(int)

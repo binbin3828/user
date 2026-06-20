@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -12,20 +13,30 @@ import (
 	"user/constant"
 )
 
+func logWithTrace(s *Service, ctx context.Context, format string, args ...interface{}) {
+	traceID := traceIDFromContext(ctx)
+	spanID := spanIDFromContext(ctx)
+	if traceID != "" {
+		format = "[trace_id=" + traceID + "] [span_id=" + spanID + "] " + format
+	}
+	s.Logger.Infof(format, args...)
+}
+
 func (s *Service) LoggerMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		reqID := getReqID(c.Request.Context())
-		s.Logger.Infof("[%s] request begin: Method: %v, request url: %s", reqID, c.Request.Method, c.Request.Host+c.Request.RequestURI)
+		ctx := c.Request.Context()
+		logWithTrace(s, ctx, "[%s] request begin: Method: %v, request url: %s", reqID, c.Request.Method, c.Request.Host+c.Request.RequestURI)
 
 		if c.Request.Body != nil {
 			body, _ := c.GetRawData()
-			s.Logger.Infof("[%s] request body: %s", reqID, body)
+			logWithTrace(s, ctx, "[%s] request body: %s", reqID, body)
 			c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
 		}
 
 		startTime := time.Now()
 		c.Next()
-		s.Logger.Infof("[%s] exec end: api: %v, execute time: %vms", reqID, c.Request.RequestURI, time.Since(startTime).Milliseconds())
+		logWithTrace(s, ctx, "[%s] exec end: api: %v, execute time: %vms", reqID, c.Request.RequestURI, time.Since(startTime).Milliseconds())
 	}
 }
 
@@ -44,7 +55,14 @@ func httpStatusFromCode(code int) int {
 
 func (s *Service) returnError(c *gin.Context, code int, msg string) {
 	reqID := getReqID(c.Request.Context())
-	s.Logger.Errorf("[%s] api: %s, code: %d, msg: %s", reqID, c.Request.RequestURI, code, msg)
+	ctx := c.Request.Context()
+	traceID := traceIDFromContext(ctx)
+	spanID := spanIDFromContext(ctx)
+	logFormat := "[%s] api: %s, code: %d, msg: %s"
+	if traceID != "" {
+		logFormat = "[trace_id=" + traceID + "] [span_id=" + spanID + "] " + logFormat
+	}
+	s.Logger.Errorf(logFormat, reqID, c.Request.RequestURI, code, msg)
 	c.JSON(httpStatusFromCode(code), gin.H{"code": code, "msg": msg})
 }
 

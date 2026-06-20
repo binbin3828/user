@@ -11,6 +11,7 @@ func NewRouter(s *Service) *gin.Engine {
 	r.Use(gin.Recovery())
 	r.Use(RequestID())
 	r.Use(CORS())
+	r.Use(SecurityHeaders())
 	r.Use(TracingMiddleware("user-service"))
 	r.Use(MetricsMiddleware())
 	r.Use(s.LoggerMiddleware())
@@ -18,10 +19,12 @@ func NewRouter(s *Service) *gin.Engine {
 	r.Use(RequestTimeout(30 * time.Second))
 	r.Use(s.AuditLog())
 
+	loginLimiter := NewRateLimiter(10, time.Minute)
+
 	r.GET("/healthz", s.Healthz)
 	r.GET("/readyz", s.Readyz)
 	r.GET("/metrics", MetricsHandler())
-	r.POST("/auth/login", s.Login)
+	r.POST("/auth/login", RateLimitMiddleware(loginLimiter), s.Login)
 
 	auth := r.Group("")
 	auth.Use(s.AuthRequired())

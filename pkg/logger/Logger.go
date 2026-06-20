@@ -9,6 +9,8 @@
 package logger
 
 import (
+	"os"
+	"strings"
 	"time"
 
 	"github.com/natefinch/lumberjack"
@@ -32,10 +34,25 @@ type ZapLogger struct {
 	sugar *zap.SugaredLogger
 }
 
+func getLogLevel() zapcore.Level {
+	switch strings.ToLower(os.Getenv("LOG_LEVEL")) {
+	case "debug":
+		return zapcore.DebugLevel
+	case "info":
+		return zapcore.InfoLevel
+	case "warn":
+		return zapcore.WarnLevel
+	case "error":
+		return zapcore.ErrorLevel
+	default:
+		return zapcore.InfoLevel
+	}
+}
+
 func NewZapLogger() *ZapLogger {
 	writeSyncer := getLogWriter()
 	encoder := getEncoder()
-	core := zapcore.NewCore(encoder, writeSyncer, zapcore.DebugLevel)
+	core := zapcore.NewCore(encoder, writeSyncer, getLogLevel())
 	logger := zap.New(core, zap.AddCaller())
 	return &ZapLogger{sugar: logger.Sugar()}
 }
@@ -83,7 +100,7 @@ func getEncoder() zapcore.Encoder {
 		encoder.AppendString("[" + time.Format("2006-01-02 15:04:05") + "]")
 	}
 	encoderConfig.EncodeLevel = zapcore.CapitalLevelEncoder
-	return zapcore.NewConsoleEncoder(encoderConfig)
+	return zapcore.NewJSONEncoder(encoderConfig)
 }
 
 func getLogWriter() zapcore.WriteSyncer {

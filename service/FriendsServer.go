@@ -179,6 +179,7 @@ func (s *Service) AddFriend(c *gin.Context) {
 		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
+	friendAdditions.Inc()
 
 	s.returnSuccess(c, gin.H{
 		"uid":       uid,

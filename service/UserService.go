@@ -58,9 +58,6 @@ func (s *Service) CreateUser(c *gin.Context) {
 		return
 	}
 
-	if req.Password == "" {
-		req.Password = "password123"
-	}
 	hashedPwd, err := hashPassword(req.Password)
 	if err != nil {
 		s.returnError(c, constant.ERROR_MYSQL_ERR, "internal error")
@@ -87,6 +84,7 @@ func (s *Service) CreateUser(c *gin.Context) {
 		s.returnError(c, constant.ERROR_MYSQL_ERR, sanitizeErr(err).Error())
 		return
 	}
+	userCreations.Inc()
 
 	info, err := s.UserDao.FindUser(c.Request.Context(), user.Id)
 	if err != nil {

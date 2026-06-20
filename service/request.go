@@ -12,7 +12,7 @@ var validate = validator.New()
 
 type createUserReq struct {
 	Name        string  `json:"name"     validate:"required"`
-	Password    string  `json:"password"`
+	Password    string  `json:"password" validate:"required,min=8"`
 	Dob         string  `json:"dob"`
 	Address     string  `json:"address"`
 	Description string  `json:"description"`
