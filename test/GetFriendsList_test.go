@@ -43,6 +43,15 @@ func TestGetFriendsList_Success(t *testing.T) {
 	if int(first["fri_uid"].(float64)) != 2 {
 		t.Errorf("expected fri_uid=2, got %v", first["fri_uid"])
 	}
+	if int(data["total"].(float64)) != 1 {
+		t.Errorf("expected total=1, got %v", data["total"])
+	}
+	if int(data["page"].(float64)) != 1 {
+		t.Errorf("expected page=1, got %v", data["page"])
+	}
+	if int(data["page_size"].(float64)) != 20 {
+		t.Errorf("expected page_size=20, got %v", data["page_size"])
+	}
 }
 
 func TestGetFriendsList_MissingUID(t *testing.T) {
@@ -103,5 +112,8 @@ func TestGetFriendsList_EmptyList(t *testing.T) {
 	list, _ := data["list"].([]interface{})
 	if len(list) != 0 {
 		t.Errorf("expected empty list, got %d items", len(list))
+	}
+	if int(data["total"].(float64)) != 0 {
+		t.Errorf("expected total=0, got %v", data["total"])
 	}
 }

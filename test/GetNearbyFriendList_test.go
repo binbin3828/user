@@ -42,6 +42,9 @@ func TestGetNearbyFriend_Success(t *testing.T) {
 	if int(first["fri_uid"].(float64)) != 2 {
 		t.Errorf("expected fri_uid=2, got %v", first["fri_uid"])
 	}
+	if int(data["total"].(float64)) != 1 {
+		t.Errorf("expected total=1, got %v", data["total"])
+	}
 }
 
 func TestGetNearbyFriend_MissingUID(t *testing.T) {
@@ -99,6 +102,9 @@ func TestGetNearbyFriend_EmptyList(t *testing.T) {
 	if len(list) != 0 {
 		t.Errorf("expected empty list, got %d items", len(list))
 	}
+	if int(data["total"].(float64)) != 0 {
+		t.Errorf("expected total=0, got %v", data["total"])
+	}
 }
 
 func TestGetNearbyFriend_WithPrecision(t *testing.T) {
@@ -125,6 +131,9 @@ func TestGetNearbyFriend_WithPrecision(t *testing.T) {
 	list := data["list"].([]interface{})
 	if len(list) == 0 {
 		t.Fatal("expected at least 1 nearby friend with precision=4")
+	}
+	if int(data["total"].(float64)) != 1 {
+		t.Errorf("expected total=1, got %v", data["total"])
 	}
 }
 

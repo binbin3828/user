@@ -146,7 +146,7 @@ func (m *MockFriendsDao) AddFriend(ctx context.Context, uid, friendID int) error
 	return nil
 }
 
-func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.RetListFriends, error) {
+func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int, limit, offset int) ([]*model.RetListFriends, error) {
 	if m.GetFriendsListErr != nil {
 		return nil, m.GetFriendsListErr
 	}
@@ -167,7 +167,20 @@ func (m *MockFriendsDao) GetFriendsList(ctx context.Context, uid int) ([]*model.
 	return list, nil
 }
 
-func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr string) ([]*model.RetNearbyFriendsList, error) {
+func (m *MockFriendsDao) CountFriendsList(ctx context.Context, uid int) (int64, error) {
+	if m.GetFriendsListErr != nil {
+		return 0, m.GetFriendsListErr
+	}
+	var count int64
+	for _, f := range m.Friends {
+		if f.Uid == uid {
+			count++
+		}
+	}
+	return count, nil
+}
+
+func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr string, limit, offset int) ([]*model.RetNearbyFriendsList, error) {
 	if m.GetNearbyFriendErr != nil {
 		return nil, m.GetNearbyFriendErr
 	}
@@ -189,4 +202,17 @@ func (m *MockFriendsDao) GetNearbyFriend(ctx context.Context, uid int, subStr st
 		return []*model.RetNearbyFriendsList{}, nil
 	}
 	return list, nil
+}
+
+func (m *MockFriendsDao) CountNearbyFriend(ctx context.Context, uid int, subStr string) (int64, error) {
+	if m.GetNearbyFriendErr != nil {
+		return 0, m.GetNearbyFriendErr
+	}
+	var count int64
+	for _, f := range m.Friends {
+		if f.Uid == uid {
+			count++
+		}
+	}
+	return count, nil
 }

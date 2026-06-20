@@ -5,7 +5,7 @@ import (
 )
 
 type User struct {
-	Id          int           `json:"id"`
+	Id          int           `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string        `json:"name"`
 	Password    string        `json:"-"`
 	Dob         string        `json:"dob"`
@@ -15,4 +15,8 @@ type User struct {
 	Latitude    float64       `json:"latitude"`
 	Longitude   float64       `json:"longitude"`
 	LocGeohash  string        `json:"loc_geohash"`
+}
+
+func (User) TableName() string {
+	return "user"
 }

@@ -1,6 +1,8 @@
 package service
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -10,7 +12,10 @@ func NewRouter(s *Service) *gin.Engine {
 	r.Use(CORS())
 	r.Use(s.LoggerMiddleware())
 	r.Use(MaxBodySize())
+	r.Use(RequestTimeout(30 * time.Second))
 
+	r.GET("/healthz", s.Healthz)
+	r.GET("/readyz", s.Readyz)
 	r.POST("/auth/login", s.Login)
 
 	auth := r.Group("")

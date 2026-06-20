@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 	"user/dao"
+	"user/model"
 	"user/pkg/config"
 	"user/pkg/dbconn"
 	"user/pkg/logger"
@@ -21,6 +22,10 @@ func main() {
 	db, err := dbconn.NewMysql(zapLog)
 	if err != nil {
 		log.Fatalf("mysql init failed: %v", err)
+	}
+
+	if err := db.AutoMigrate(&model.User{}, &model.Friends{}); err != nil {
+		log.Fatalf("auto migrate failed: %v", err)
 	}
 
 	userDao := dao.NewUserDao(db, zapLog)

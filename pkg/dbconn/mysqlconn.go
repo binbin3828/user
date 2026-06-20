@@ -1,6 +1,7 @@
 package dbconn
 
 import (
+	"fmt"
 	"time"
 	"user/pkg/config"
 	"user/pkg/logger"
@@ -34,12 +35,22 @@ func NewMysql(log logger.Logger) (*gorm.DB, error) {
 
 	gormLogger := &logger.GormLogger{Logger: log}
 
-	db, err := gorm.Open(mysql.Open(mysqlConf.DataSourceName), &gorm.Config{
-		NamingStrategy: schema.NamingStrategy{SingularTable: true},
-		Logger:         gormLogger,
-	})
+	var db *gorm.DB
+	var err error
+
+	for i := 0; i < 3; i++ {
+		db, err = gorm.Open(mysql.Open(mysqlConf.DataSourceName), &gorm.Config{
+			NamingStrategy: schema.NamingStrategy{SingularTable: true},
+			Logger:         gormLogger,
+		})
+		if err == nil {
+			break
+		}
+		log.Warnf("mysql connection attempt %d failed: %v", i+1, err)
+		time.Sleep(time.Duration(i+1) * time.Second)
+	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("mysql connection failed after 3 attempts: %v", err)
 	}
 
 	sqlDB, err := db.DB()

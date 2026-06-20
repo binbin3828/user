@@ -3,9 +3,13 @@ package model
 import "user/pkg/util"
 
 type Friends struct {
-	Uid        int           `json:"uid"`
-	FriendID   int           `json:"friend_id"`
+	Uid        int           `json:"uid" gorm:"primaryKey"`
+	FriendID   int           `json:"friend_id" gorm:"column:fri;primaryKey"`
 	CreateTime util.JsonTime `json:"create_at"`
+}
+
+func (Friends) TableName() string {
+	return "friends"
 }
 
 type RetListFriends struct {
