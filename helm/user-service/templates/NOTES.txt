@@ -1,0 +1,37 @@
+============================================
+  User Service deployed successfully!
+  Chart:    {{ .Chart.Name }}-{{ .Chart.Version }}
+  App:      {{ .Chart.AppVersion }}
+  Release:  {{ .Release.Name }}
+  Namespace: {{ .Release.Namespace }}
+============================================
+
+1. Check pod status:
+   kubectl -n {{ .Release.Namespace }} get pods -l app.kubernetes.io/instance={{ .Release.Name }}
+
+2. Port forward for local access:
+   kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "user-service.fullname" . }} 8080:{{ .Values.service.port }}
+
+3. Test health:
+   curl http://localhost:8080/healthz
+
+4. View metrics:
+   curl http://localhost:8080/metrics
+
+5. View Swagger UI:
+   open http://localhost:8080/swagger/index.html
+
+{{- if .Values.autoscaling.enabled }}
+Autoscaling is ENABLED ({{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }} replicas).
+{{- else }}
+Autoscaling is DISABLED ({{ .Values.replicaCount }} replicas).
+{{- end }}
+
+{{- if .Values.mysql.enabled }}
+MySQL is bundled with this chart for development only.
+{{- else }}
+MySQL is NOT bundled. Ensure an external MySQL instance is available and MYSQL_DSN is set.
+{{- end }}
+
+IMPORTANT: Change the JWT secret from the default value in production:
+  helm upgrade {{ .Release.Name }} . --set secret.jwtSecret="$(openssl rand -base64 32)"

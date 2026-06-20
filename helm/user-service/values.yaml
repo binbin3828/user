@@ -1,0 +1,128 @@
+# Default values for user-service Helm chart
+
+# -- Number of replicas (ignored if autoscaling is enabled)
+replicaCount: 3
+
+image:
+  # -- Container image repository
+  repository: user-service
+  # -- Image pull policy
+  pullPolicy: IfNotPresent
+  # -- Image tag (overrides appVersion)
+  tag: ""
+
+# -- Image pull secrets for private registries
+imagePullSecrets: []
+# -- Override chart name
+nameOverride: ""
+# -- Override full resource name
+fullnameOverride: ""
+
+serviceAccount:
+  # -- Create a ServiceAccount
+  create: true
+  # -- ServiceAccount annotations
+  annotations: {}
+  # -- ServiceAccount name (auto-generated if empty)
+  name: ""
+
+podAnnotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port: "8080"
+  prometheus.io/path: "/metrics"
+
+# -- Pod security context
+podSecurityContext:
+  fsGroup: 1001
+  runAsNonRoot: true
+
+# -- Container security context
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  # -- Service type
+  type: ClusterIP
+  # -- Service port
+  port: 80
+  # -- Container target port
+  targetPort: 8080
+
+# -- Resource requests and limits
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+# -- Horizontal Pod Autoscaler configuration
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# -- Pod Disruption Budget configuration
+pdb:
+  enabled: true
+  minAvailable: 2
+
+# -- Node selector for pod placement
+nodeSelector: {}
+
+# -- Tolerations for pod placement
+tolerations: []
+
+# -- Pod affinity rules
+affinity:
+  podAntiAffinity:
+    preferredDuringSchedulingIgnoredDuringExecution:
+      - weight: 100
+        podAffinityTerm:
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: user-service
+          topologyKey: kubernetes.io/hostname
+
+# -- Application configuration (non-sensitive, injected as ConfigMap)
+config:
+  logLevel: "info"
+  ginMode: "release"
+  tlsEnabled: "false"
+  otelTraceSampleRate: "0.1"
+  otelExporterOtlpEndpoint: ""
+
+# -- Application secrets
+secret:
+  # -- MySQL DSN (leave empty to use embedded config.yaml)
+  mysqlDsn: ""
+  # -- JWT signing secret (REQUIRED - must be changed in production)
+  jwtSecret: "CHANGE_ME_USE_A_LONG_RANDOM_STRING"
+
+# -- MySQL dependency (disabled by default, use external MySQL or enable for development)
+mysql:
+  enabled: false
+  image: mysql:8.0
+  auth:
+    rootPassword: ""
+    database: bobby_test
+    username: xgame
+    password: ""
+  primary:
+    persistence:
+      enabled: true
+      size: 10Gi
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: 1000m
+        memory: 1Gi

@@ -1,123 +1,430 @@
-# user
-A simple restful API framework,  a mysql CURD example for  user table
+# user-service
 
-一个自己实现的简单的RESTFULL API框架，实现了对USER表的CRUD操作
+基于 Go 语言开发的用户管理与地理围栏好友发现微服务，采用 Gin + GORM 架构，具备完整的可观测性（日志、指标、链路追踪）和安全防护体系。
 
-### 特性
+---
 
-- 遵循 RESTful API 设计规范
+## 目录
 
-- 遵循 MVC 接口代码规范
+- [功能特性](#功能特性)
+- [技术栈](#技术栈)
+- [项目结构](#项目结构)
+- [快速开始](#快速开始)
+  - [环境要求](#环境要求)
+  - [本地编译运行](#本地编译运行)
+  - [Docker Compose 一键启动](#docker-compose-一键启动)
+- [配置说明](#配置说明)
+  - [基础配置](#基础配置)
+  - [环境变量覆盖](#环境变量覆盖)
+- [API 接口](#api-接口)
+- [可观测性](#可观测性)
+  - [日志](#日志)
+  - [指标监控](#指标监控)
+  - [链路追踪](#链路追踪)
+- [安全设计](#安全设计)
+- [测试](#测试)
+- [部署](#部署)
+- [运维手册](#运维手册)
 
-- 基于 GORM 的数据库存储，可扩展多种类型数据库
- 
-- 基于 GORM 数据库连接池
+---
 
-- 配置文件采用 .yaml
+## 功能特性
 
-- 支持滚动日志
+- **用户管理**：注册、登录、查询、修改、删除，JWT Bearer 认证
+- **好友系统**：双向添加好友、好友列表分页查询
+- **附近的人**：基于 Geohash 算法的地理位置好友发现
+- **安全防护**：bcrypt 密码哈希、安全响应头、CORS、请求限流、请求体大小限制
+- **可观测性**：Zap 结构化滚动日志、Prometheus 指标、OpenTelemetry 链路追踪
+- **生产就绪**：健康检查探针、优雅关闭、数据库连接池、TLS 支持
+- **容器化**：多阶段 Docker 构建、Kubernetes 部署清单、Helm Chart
 
-- 支持 makefile
+---
 
-- 支持 test 单元测试
+## 技术栈
 
-### 实现功能
+| 类别 | 技术 |
+|------|------|
+| 语言 | Go 1.25 |
+| Web 框架 | Gin v1.12 |
+| ORM | GORM v2 + MySQL 8.0 |
+| 认证 | JWT (golang-jwt/v5) + bcrypt |
+| 参数校验 | go-playground/validator |
+| 日志 | Zap + lumberjack 滚动切片 |
+| 指标 | Prometheus client_golang |
+| 追踪 | OpenTelemetry (OTLP gRPC / Stdout) |
+| 配置 | Viper + embed 嵌入配置 + 环境变量覆盖 |
+| API 文档 | Swagger (swaggo/swag) |
 
-- 对 User表的 增删改查
+---
 
-- zap实现的滚动日志，gorm日志输出（高亮，打印sql执行时间）
-
-- 添加好友，好友列表
-
-- geohash算法实现附近的人
-
-
-
-### 获取代码
-
-
-```bash
-# 获取接口代码
-git clone https://github.com/AmberGroup-WhaleFin/go-backend-test-guobin.git
-
-# 切换到 guobin-user分支
-git checkout -b guobin-user origin/guobin-user
-
-```
-
-### 代码结构目录
-
-    ├── cmd     ---------------------------------------------------main文件入口，编译目录
-    │   ├── main.go               // main文件
-    │   ├── makefile              // makefile
-    │   └── UserServer            // make 后生成的二进制执行文件
-    ├── constant  ------------------------------------------------- 定义的常量/错误码目录
-    │   └── ErrorCode.go          // 错误码定义
-    ├── dao       ------------------- ----------------------------- dao层(数据的访问和操作)
-    │   ├── FriendsDao.go         // 好友dao
-    │   └── UserDao.go            // 用户dao
-    ├── go.mod                    // go mod包依赖管理
-    ├── go.sum                    // go mod包依赖管理
-    ├── log       -------------------------------------------------  日志目录
-    │   └── user.log              // 日志文件滚动
-    ├── model     -------------------------------------------------- 数据模型
-    │   ├── Friends.go            //好友 model
-    │   └── User.go               //用户 model
-    ├── pkg       -------------------------------------------------- 通用工具包
-    │   ├── config       ------------------------------------------- 配置文件相关            
-    │   │   ├── config.go         //配置文件管理包
-    │   │   └── config.yaml       //配置文件.yaml
-    │   ├── dbconn                ----------------------------------- 数据库连接管理  
-    │   │   └── mysqlconn.go      //数据库连接
-    │   ├── logger                -----------------------------------日志管理
-    │   │   ├── GormLogger.go     // goorm日志
-    │   │   └── Logger.go         // zip日志管理
-    │   └── util                  ------------------------------------其他工具包
-    │       ├── JsonTime.go       // json转换时间工具
-    │       └── net.go            // 网络消息返回定义
-    ├── README.md                 ------------------------------------- 说明文档
-    ├── service                   ------------------------------------- 接口服务
-    │   ├── FriendsServer.go      // 好友相关接口文件
-    │   ├── Routes.go             // 接口路由
-    │   └── UserService.go        // 用户相关接口文件
-    ├── test                      --------------------------------------单元测试
-    │   ├── AddFriends_test.go          //添加好友
-    │   ├── CreateUser_test.go          //创建用户
-    │   ├── DeleteUser_test.go          //删除用户
-    │   ├── GetFriendsList_test.go      //好友列表
-    │   ├── GetNearbyFriendList_test.go //附近的好友
-    │   ├── GetUser_test.go             //获取用户信息
-    │   └── ModifyUser_test.go          //修改用户信息
-    └── UserAPI接口协议文档.md     //接口协议文档
-
-
-### 启动说明(linux环境)
-
-```bash
-# 进入 user 后端项目
-cd ./user
-
-# 编译项目, 生成 UserServer 二进制执行文件
-cd ./cmd
-make 
-
-# 修改配置,修改数据库连接信息  
-# 文件路径  ./user/pkg/config/config.yaml 
-vi ./pkg/config/config.yaml 
-
-#启动
-cd ./cmd
-./UserServer   #前台启动
-./UserServer & #后台启动
+## 项目结构
 
 ```
+├── cmd/
+│   ├── main.go                    # 应用入口，启动流程编排
+│   └── makefile                   # 编译/测试/清理 Makefile
+├── constant/
+│   └── ErrorCode.go               # 统一错误码定义
+├── dao/                           # 数据访问层（GORM 实现）
+│   ├── UserDao.go                 # 用户 DAO 接口与实现
+│   └── FriendsDao.go              # 好友 DAO 接口与实现
+├── deploy/                        # 可观测性配置
+│   ├── prometheus/rules.yml       # Prometheus 告警规则
+│   └── grafana/user-service-dashboard.json  # Grafana 仪表盘
+├── docs/                          # Swagger 自动生成文档
+├── helm/user-service/             # Helm Chart
+├── k8s/                           # Kubernetes 部署清单
+│   ├── namespace.yaml             # 命名空间
+│   ├── serviceaccount.yaml        # 服务账号
+│   ├── configmap.yaml             # 配置映射
+│   ├── secret.yaml                # 密钥
+│   ├── deployment.yaml            # 部署定义
+│   ├── service.yaml               # 服务暴露
+│   ├── hpa.yaml                   # 水平自动扩缩
+│   ├── pdb.yaml                   # Pod 中断预算
+│   └── kustomization.yaml         # Kustomize 入口
+├── model/                         # 数据模型（GORM 实体 + DTO）
+│   ├── User.go
+│   └── Friends.go
+├── pkg/                           # 通用工具包
+│   ├── config/                    # 配置管理（Viper + embed）
+│   ├── dbconn/                    # MySQL 连接（含重试）
+│   ├── logger/                    # Logger 接口 + Zap 实现
+│   └── util/                      # 响应结构、错误类型、JSON 时间
+├── service/                       # 业务逻辑 + 中间件 + 路由
+│   ├── Service.go                 # DI 容器（Service 结构体）
+│   ├── Routes.go                  # 路由注册与中间件链
+│   ├── middleware.go              # RequestID、CORS、限流、安全头、审计日志
+│   ├── auth.go                    # JWT 签发与解析
+│   ├── auth_helper.go             # bcrypt 密码哈希
+│   ├── UserService.go             # 用户 CRUD 处理
+│   ├── FriendsServer.go           # 好友/附近好友处理
+│   ├── request.go                 # 请求 DTO + 校验
+│   ├── ResponseHandler.go         # 响应封装、日志中间件、健康探针
+│   ├── metrics.go                 # Prometheus 指标定义
+│   ├── dbmetrics.go               # 数据库连接池指标采集器
+│   └── tracing.go                 # OpenTelemetry 初始化
+├── sql/
+│   └── init.sql                   # 数据库初始化 DDL
+├── test/                          # 单元测试（mock 实现）
+├── docker-compose.yml             # 本地开发环境
+├── Dockerfile                     # 多阶段构建
+├── .dockerignore
+├── .gitignore
+├── go.mod
+├── go.sum
+└── README.md
+```
 
-### 在线体验
-在线接口地址
+---
 
-http://121.196.204.236:8080/
+## 快速开始
 
+### 环境要求
 
-###  License
+- Go 1.25+
+- MySQL 8.0+
+- （可选）Docker & Docker Compose
+
+### 本地编译运行
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/binbin3828/user.git
+cd user
+
+# 2. 修改数据库连接配置（或通过环境变量设置）
+vi pkg/config/config.yaml
+
+# 3. 初始化数据库表
+mysql -u root -p < sql/init.sql
+
+# 4. 编译
+cd cmd && make build
+
+# 5. 启动
+./UserServer
+```
+
+### Docker Compose 一键启动
+
+```bash
+# 启动 MySQL + user-service（自动建表）
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f user-service
+
+# 验证
+curl http://localhost:8080/healthz
+
+# 停止
+docker-compose down
+```
+
+---
+
+## 配置说明
+
+### 基础配置
+
+配置文件嵌入在二进制中（`pkg/config/config.yaml`）：
+
+```yaml
+mysql:
+  driveName: mysql
+  dataSourceName: xgame:${DB_PASSWORD}@tcp(127.0.0.1:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+  maxIdle: 25
+  maxOpen: 50
+  maxLifetime: 1
+
+cors:
+  allowedOrigins: "*"
+
+jwt:
+  secret: dev-change-this-in-production
+
+tls:
+  enabled: false
+  certFile: "cert.pem"
+  keyFile: "key.pem"
+```
+
+### 环境变量覆盖
+
+| 环境变量 | 说明 | 示例 |
+|----------|------|------|
+| `DB_PASSWORD` | 替换 DSN 中的 `${DB_PASSWORD}` 占位符 | `mysecret` |
+| `MYSQL_DSN` | 完整覆盖 DSN（优先级高于 DB_PASSWORD） | `user:pass@tcp(...)` |
+| `JWT_SECRET` | JWT 签名密钥 | `openssl rand -base64 32` |
+| `LOG_LEVEL` | 日志级别：debug / info / warn / error | `debug` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP 导出地址（为空则输出到 stdout） | `localhost:4317` |
+| `OTEL_TRACE_SAMPLE_RATE` | 采样率 0.0-1.0（默认 0.1） | `0.5` |
+
+---
+
+## API 接口
+
+### 系统端点（无需认证）
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/healthz` | 存活探针 |
+| GET | `/readyz` | 就绪探针（含数据库检查） |
+| GET | `/metrics` | Prometheus 指标暴露 |
+| GET | `/swagger/*any` | Swagger UI 文档 |
+
+### 业务端点
+
+| 方法 | 路径 | 认证 | 限流 | 说明 |
+|------|------|------|------|------|
+| POST | `/v1/auth/login` | 否 | 是（10次/分钟/IP） | 登录获取 JWT |
+| GET | `/v1/user/:uid` | Bearer | 否 | 获取用户信息 |
+| POST | `/v1/user` | Bearer | 否 | 创建用户 |
+| PUT | `/v1/user` | Bearer | 否 | 修改用户信息 |
+| DELETE | `/v1/user/:uid` | Bearer | 否 | 删除用户（仅本人） |
+| POST | `/v1/friends` | Bearer | 否 | 添加好友 |
+| GET | `/v1/friends/:uid` | Bearer | 否 | 好友列表（分页） |
+| GET | `/v1/nearbyfriends/:uid` | Bearer | 否 | 附近好友（分页，Geohash） |
+
+### 统一响应格式
+
+**成功：**
+
+```json
+{
+  "code": 0,
+  "data": { ... }
+}
+```
+
+**分页成功：**
+
+```json
+{
+  "code": 0,
+  "data": [ ... ],
+  "pagination": {
+    "total": 100,
+    "page": 1,
+    "page_size": 20,
+    "total_pages": 5
+  }
+}
+```
+
+**错误：**
+
+```json
+{
+  "code": -1,
+  "msg": "param uid not set"
+}
+```
+
+**错误码：**
+
+| 错误码 | 含义 | HTTP 状态码 |
+|--------|------|------------|
+| 0 | 成功 | 200 |
+| -1 | 参数错误 | 400 |
+| -2 | 服务内部错误 | 500 |
+| -3 | 认证失败 | 401 |
+| -4 | 权限不足 | 403 |
+
+---
+
+## 可观测性
+
+### 日志
+
+- 使用 **Zap** JSON 格式输出，注入 trace_id / span_id 实现日志-追踪关联
+- **lumberjack** 滚动切片（单文件 1MB，保留 300 个备份，30 天过期，自动压缩）
+- GORM SQL 日志自动记录执行时间和影响行数
+
+### 指标监控
+
+**业务指标：**
+
+| 指标名 | 类型 | 说明 |
+|--------|------|------|
+| `login_attempts_total` | CounterVec | 登录尝试（分 success/fail） |
+| `user_creations_total` | Counter | 用户注册数 |
+| `friend_additions_total` | Counter | 好友添加数 |
+
+**HTTP 指标：**
+
+| 指标名 | 类型 | 说明 |
+|--------|------|------|
+| `http_requests_total` | CounterVec | 请求总数（method/path/status） |
+| `http_request_duration_seconds` | HistogramVec | 请求耗时分布 |
+| `http_requests_in_flight` | Gauge | 当前并发请求数 |
+
+**数据库连接池指标：**
+
+| 指标名 | 类型 |
+|--------|------|
+| `db_connections_max_open` | Gauge |
+| `db_connections_open` | Gauge |
+| `db_connections_in_use` | Gauge |
+| `db_connections_idle` | Gauge |
+| `db_connections_wait_count_total` | Counter |
+| `db_connections_wait_duration_seconds_total` | Counter |
+| `db_connections_max_idle_closed_total` | Counter |
+| `db_connections_max_lifetime_closed_total` | Counter |
+
+**Go 运行时指标**通过 `NewGoCollector()` 自动注册（goroutine、内存、GC 等）。
+
+### 链路追踪
+
+- 基于 **OpenTelemetry**，支持 OTLP gRPC 导出（Jaeger/Tempo 等兼容）或 Stdout 导出
+- 采样率通过 `OTEL_TRACE_SAMPLE_RATE` 控制（默认 10%）
+- DAO 层每个方法生成独立 Span，携带 table、user.id 等属性
+- Gin 请求自动生成 Span（通过 otelgin 中间件）
+
+---
+
+## 安全设计
+
+| 层面 | 措施 |
+|------|------|
+| 传输安全 | 支持 TLS（可选），HSTS 头（TLS 开启时） |
+| 认证 | JWT HS256，24 小时过期 |
+| 密码存储 | bcrypt 哈希 |
+| 参数校验 | go-playground/validator，最小密码长度 8 位 |
+| 请求体限制 | 最大 1MB |
+| Content-Type | POST/PUT 强制 `application/json` |
+| CORS | 可配置允许来源 |
+| 安全响应头 | X-Content-Type-Options、X-Frame-Options、X-XSS-Protection、Referrer-Policy、CSP |
+| 限流 | 登录接口 10 次/分钟/IP（内存实现） |
+| 权限控制 | 用户仅可操作自己的资源 |
+| 请求超时 | 全局 30 秒 |
+| 错误脱敏 | 内部错误不泄露到客户端响应 |
+| 审计日志 | 所有请求记录 user_id、method、path、status |
+
+---
+
+## 测试
+
+```bash
+# 运行所有单元测试
+cd cmd && make test
+
+# 或直接使用 go test
+go test -v ./test/...
+
+# 生成覆盖率报告
+go test -coverprofile=coverage.out ./test/...
+go tool cover -html=coverage.out
+```
+
+测试覆盖范围：
+
+| 测试文件 | 覆盖内容 |
+|----------|----------|
+| `Healthz_test.go` | 健康/就绪探针 |
+| `GetUser_test.go` | 用户查询 |
+| `CreateUser_test.go` | 用户创建 |
+| `Login_test.go` | 登录认证 |
+| `AuthMiddleware_test.go` | JWT 中间件 |
+| `ModifyUser_test.go` | 用户修改 |
+| `DeleteUser_test.go` | 用户删除 |
+| `AddFriends_test.go` | 添加好友 |
+| `GetFriendsList_test.go` | 好友列表 |
+| `GetNearbyFriendList_test.go` | 附近好友 |
+| `CORS_test.go` | CORS 中间件 |
+| `SecurityHeaders_test.go` | 安全响应头 |
+| `RateLimiter_test.go` | 限流中间件 |
+| `Logger_test.go` | 日志模块 |
+| `Config_test.go` | 配置模块 |
+
+---
+
+## 部署
+
+### Docker
+
+```bash
+docker build -t user-service:latest .
+docker run -d -p 8080:8080 \
+  -e MYSQL_DSN="user:pass@tcp(host:3306)/db?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true" \
+  -e JWT_SECRET="$(openssl rand -base64 32)" \
+  user-service:latest
+```
+
+### Kubernetes
+
+```bash
+# 方式一：Kustomize
+kubectl apply -k k8s/
+
+# 方式二：Helm
+helm upgrade --install user-service ./helm/user-service \
+  --namespace user-service --create-namespace \
+  --set secret.jwtSecret="$(openssl rand -base64 32)" \
+  --set secret.mysqlDsn="user:pass@tcp(mysql:3306)/db?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true"
+```
+
+### 交叉编译
+
+```bash
+# Linux amd64
+cd cmd && make build-linux
+
+# 手动指定平台
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o UserServer ./cmd/
+```
+
+---
+
+## 运维手册
+
+详细的部署、监控、告警、故障排查指南参见 [部署运维手册](docs/ops-manual.md)。
+
+---
+
+## License
+
+MIT License
 
 Copyright (c) 2022 guobin

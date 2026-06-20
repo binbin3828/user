@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: user-service-config
+  namespace: user-service
+  labels:
+    app.kubernetes.io/name: user-service
+data:
+  LOG_LEVEL: "info"
+  OTEL_TRACE_SAMPLE_RATE: "0.1"
+  GIN_MODE: "release"
+  TLS_ENABLED: "false"

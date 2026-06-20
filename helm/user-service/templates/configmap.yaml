@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "user-service.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "user-service.labels" . | nindent 4 }}
+data:
+  LOG_LEVEL: {{ .Values.config.logLevel | quote }}
+  GIN_MODE: {{ .Values.config.ginMode | quote }}
+  TLS_ENABLED: {{ .Values.config.tlsEnabled | quote }}
+  OTEL_TRACE_SAMPLE_RATE: {{ .Values.config.otelTraceSampleRate | quote }}
+  {{- if .Values.config.otelExporterOtlpEndpoint }}
+  OTEL_EXPORTER_OTLP_ENDPOINT: {{ .Values.config.otelExporterOtlpEndpoint | quote }}
+  {{- end }}

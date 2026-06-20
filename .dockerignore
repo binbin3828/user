@@ -1,0 +1,14 @@
+*.md
+.git
+.gitignore
+.editorconfig
+.DS_Store
+log/
+*.log
+coverage.out
+.vscode/
+.idea/
+deploy/
+docs/
+test/
+sql/

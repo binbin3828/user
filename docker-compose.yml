@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: user-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root123}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-bobby_test}
+      MYSQL_USER: ${MYSQL_USER:-xgame}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-xgame123}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-root123}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - user-network
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: user-service
+    restart: unless-stopped
+    environment:
+      MYSQL_DSN: xgame:${MYSQL_PASSWORD:-xgame123}@tcp(mysql:3306)/bobby_test?charset=utf8mb4&loc=Asia%2FShanghai&parseTime=true&timeout=5s&readTimeout=2s&writeTimeout=2s
+      JWT_SECRET: ${JWT_SECRET:-prod-change-me-to-a-long-random-string}
+      LOG_LEVEL: ${LOG_LEVEL:-debug}
+      OTEL_EXPORTER_OTLP_ENDPOINT: ${OTEL_EXPORTER_OTLP_ENDPOINT:-}
+      OTEL_TRACE_SAMPLE_RATE: ${OTEL_TRACE_SAMPLE_RATE:-0.1}
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - user-network
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  user-network:
+    driver: bridge
