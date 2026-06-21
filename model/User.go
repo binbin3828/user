@@ -8,7 +8,7 @@ type User struct {
 	Id          int           `json:"id" gorm:"primaryKey;autoIncrement"`
 	Name        string        `json:"name"`
 	Password    string        `json:"-"`
-	Email       string        `json:"email"`
+	Email       string        `json:"email" gorm:"index:idx_email"`
 	Dob         string        `json:"dob"`
 	Address     string        `json:"address"`
 	Description string        `json:"description"`

@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS `user` (
     `deleted_at`  DATETIME      DEFAULT NULL COMMENT '软删除时间',
     PRIMARY KEY (`id`),
     KEY `idx_name` (`name`),
+    KEY `idx_email` (`email`),
     KEY `idx_geohash` (`loc_geohash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
 
